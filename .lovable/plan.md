@@ -1,78 +1,98 @@
 
 
-# Expand Demo Dataset
+# Production-Grade UI/UX Overhaul
 
 ## Overview
-Expand the current 3-transaction demo graph into a richer 8-transaction graph with branching paths, multiple addresses, and consolidation patterns to better showcase the visualization.
+Transform the current functional prototype into a polished, enterprise-ready Bitcoin transaction explorer with improved visual hierarchy, better information density, keyboard shortcuts, resizable panels, a professional status bar, graph legend, and refined micro-interactions throughout.
 
-## New Graph Structure
+## Changes by Area
 
-The expanded graph adds 5 new transactions and 3 new addresses, creating branches and a consolidation:
+### 1. Header Redesign (`src/components/Header.tsx`)
+- Add a subtle gradient separator line below the header for depth
+- Group actions into a proper toolbar with dividers between logical groups (brand | actions | search)
+- Add keyboard shortcut hint on the search input (`Ctrl+K` to focus)
+- Show a "Demo Mode" badge/pill next to the logo when demo is active (amber background, small text)
+- Add a tooltip on the Demo toggle explaining what it does
+- Improve search input with a subtle search icon inside the input (prefix icon pattern) instead of a separate button on small screens
 
-```text
-                          +-> Tx C (Alice -> Dave, Alice change) -> Tx F (Dave -> Mixer)
-                         /
-Coinbase -> Tx A (split) 
-                         \
-                          +-> Tx B (Bob -> Exchange, Bob change) -> Tx E (Bob consolidates with Carol)
-                                                                        ^
-                              Tx D (standalone: Carol funding) ----------+
-```
+### 2. Graph Panel Enhancements (`src/components/TransactionGraph.tsx`)
+- **Graph Legend**: Add a compact legend overlay (top-left) showing node color meanings: blue = Regular, green = Labeled, gray = Coinbase, orange = Selected
+- **Better Empty State**: Replace plain text with an illustrated empty state -- a centered Bitcoin icon with concentric dashed rings and instructional text with a "Try Demo Mode" call-to-action button
+- **Zoom controls**: Add tooltip labels to zoom buttons, add a "Reset Layout" button, and style with glass-morphism (backdrop-blur + semi-transparent bg)
+- **Node count badge**: Show "8 nodes, 7 edges" count in bottom-left corner
+- **Hover cursor**: Set cursor to pointer on nodes via Cytoscape styles
 
-- **Tx C**: Alice splits her funds (sends to Dave, keeps change)
-- **Tx D**: Independent transaction from Carol (second root/source)
-- **Tx E**: Bob and Carol consolidate into one output (multi-input tx)
-- **Tx F**: Dave sends to a mixer address
-- **Tx G**: Exchange internal transfer (from exchange output of Tx B)
+### 3. Resizable Panels (`src/pages/Index.tsx`)
+- Replace the fixed flex layout with `react-resizable-panels` (already installed) for the graph vs. details split and the details vs. label editor split
+- Add subtle resize handles with a grip indicator
+- Persist panel sizes to localStorage
+- Keep mobile layout as collapsible accordion (unchanged)
 
-## Changes
+### 4. Transaction Details Polish (`src/components/TransactionDetails.tsx`)
+- Add a section header with an icon (FileText)
+- TXID row: show full truncated ID in a styled code block with a copy button that shows a checkmark animation on success
+- Add colored confirmation badge: green "Confirmed" for high confirmations, yellow "Recent" for low
+- Format BTC values with subtle BTC symbol styling
+- Inputs/Outputs: default to open state, show as a styled table with alternating row colors, address column with copy-on-click, and value column right-aligned
+- Add a "View on Mempool" button styled as a proper secondary button instead of just a tiny icon
+- Better loading skeleton with proper content-shaped placeholders
 
-### `src/lib/mock-data.ts` -- Single file modified
+### 5. Label Editor Polish (`src/components/LabelEditor.tsx`)
+- Redesign form with proper field labels (not just placeholders)
+- Add form field descriptions (small helper text under each field)
+- Style existing labels as cards/chips with tag icon, hover highlight, and action buttons that appear on hover
+- Add an "editing" visual state: highlight the form with a colored left border when editing an existing label
+- Show label count in section header ("Labels (3)")
+- Better empty state when no labels exist: "No labels yet. Add one above."
 
-**New txids** added to `DEMO_TXIDS`:
-- `txC`, `txD`, `txE`, `txF`, `txG`
+### 6. Status Bar (new: `src/components/StatusBar.tsx`)
+- A thin footer bar at the bottom of the screen showing:
+  - Connection status indicator (green dot = connected, red = disconnected, hidden in demo mode)
+  - Selected transaction TXID (truncated, clickable to copy)
+  - Node/edge count from current graph
+  - "Demo Mode" indicator when active
+- Monospace font, muted colors, very compact (h-7)
 
-**New addresses** added to `DEMO_ADDRESSES`:
-- `dave`, `carol`, `mixer`
+### 7. Connection Banner Improvement (`src/components/ConnectionBanner.tsx`)
+- Add a dismiss button (X) that hides the banner for the session
+- Add a "Try Demo Mode" link/button within the banner text
 
-**New transactions** added to `DEMO_TRANSACTIONS`:
-- **Tx C**: Alice (from Tx A output 0) sends 2.0 to Dave, 1.49 change back to Alice
-- **Tx D**: Independent coinbase-like source -- Carol receives 1.5 BTC (separate funding tx with a generic input)
-- **Tx E**: Consolidation -- Bob (Tx B change, 0.23) + Carol (Tx D, 1.5) merge into 1.72 BTC to a new Bob address
-- **Tx F**: Dave (from Tx C) sends 1.8 to mixer, 0.19 change
-- **Tx G**: Exchange internal -- uses Tx B exchange output (2.5) to send 2.49 to another exchange address
+### 8. Global CSS & Theme Refinements (`src/index.css`)
+- Add custom scrollbar styling (thin, dark-themed) for all scrollable areas
+- Add focus-visible ring styles for keyboard navigation accessibility
+- Add a subtle dot-grid background pattern on the graph area for depth
+- Refine border colors for slightly more contrast
 
-**Updated `spent_by`** links on existing outputs:
-- Tx A output 0 (Alice, 3.5) gets `spent_by: txC`
-- Tx B output 0 (Exchange, 2.5) gets `spent_by: txG`
-- Tx B output 1 (Bob, 0.23) gets `spent_by: txE`
+### 9. Keyboard Shortcuts
+- `Ctrl/Cmd + K`: Focus search input
+- `Escape`: Deselect current node (clear selectedTxid)
+- Handle in `Index.tsx` with a `useEffect` for keydown
 
-**New graph nodes** (5 added, total 8):
-- Tx C (blue, no label), Tx D (gray, coinbase-like), Tx E (green, has label), Tx F (blue, no label), Tx G (green, has label)
-
-**New graph edges** (5 added, total 7):
-- Tx A -> Tx C (3.5 BTC)
-- Tx B -> Tx E (0.23 BTC)
-- Tx D -> Tx E (1.5 BTC) -- consolidation input
-- Tx C -> Tx F (2.0 BTC)
-- Tx B -> Tx G (2.5 BTC)
-
-**New labels** (3 added, total 5):
-- Tx D: "Carol's funding" 
-- Tx E: "Consolidation"
-- Tx G: "Exchange internal"
+### 10. Import/Export Modals Polish (`src/components/ImportModal.tsx`, `src/components/ExportModal.tsx`)
+- Add file size display after selection
+- Add a progress indicator during import
+- Export modal: show label breakdown by type (tx: 3, addr: 1, etc.)
+- Better drag-and-drop zone with dashed animated border on dragover
 
 ## Technical Details
 
-**Files modified:** `src/lib/mock-data.ts` only
+**Files created:**
+- `src/components/StatusBar.tsx` -- New status bar component
+- `src/components/GraphLegend.tsx` -- Graph color legend overlay
 
-No other files need changes -- the demo mode context and all consuming components already work with any number of transactions/nodes/edges.
+**Files modified:**
+- `src/pages/Index.tsx` -- Resizable panels, keyboard shortcuts, status bar integration
+- `src/components/Header.tsx` -- Toolbar redesign, Ctrl+K, demo badge, tooltips
+- `src/components/TransactionGraph.tsx` -- Legend, empty state CTA, node stats, cursor, glass controls
+- `src/components/TransactionDetails.tsx` -- Confirmation badge, table layout, copy animation, open by default
+- `src/components/LabelEditor.tsx` -- Field labels, card-style labels, editing indicator, count
+- `src/components/ConnectionBanner.tsx` -- Dismiss button, demo mode CTA
+- `src/components/ImportModal.tsx` -- File size, animated drop zone
+- `src/components/ExportModal.tsx` -- Label type breakdown
+- `src/index.css` -- Custom scrollbars, dot grid bg, focus styles
+- `tailwind.config.ts` -- Any new animation keyframes needed
 
-**Graph characteristics after expansion:**
-- 8 nodes, 7 edges
-- Branching: Tx A fans out to both Tx B and Tx C
-- Consolidation: Tx E has 2 inputs from different sources
-- Multiple roots: Coinbase and Tx D are both source nodes
-- Mix of labeled (5) and unlabeled (3) nodes for visual variety
-- Realistic fee deductions on each transaction
+**No new dependencies required** -- uses `react-resizable-panels` (already installed), existing shadcn components, and Tailwind utilities.
+
+**Scope**: This is a purely visual/UX upgrade. No changes to data flow, API layer, demo mode logic, or types. All existing functionality remains intact.
 
