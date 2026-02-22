@@ -75,12 +75,37 @@ const Index = () => {
 
         {/* Bottom panels */}
         <div className="flex flex-col md:flex-row md:flex-[2] md:min-h-0 border-t border-border">
-          <div className="flex-1 md:border-r border-border overflow-hidden min-h-[200px] md:min-h-0">
-            <TransactionDetails selectedTxid={selectedTxid} />
-          </div>
-          <div className="flex-1 overflow-hidden border-t md:border-t-0 border-border min-h-[200px] md:min-h-0">
-            <LabelEditor selectedTxid={selectedTxid} />
-          </div>
+          {isMobile ? (
+            <>
+              <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
+                <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-2 text-sm font-semibold text-foreground border-b border-border hover:bg-muted/50 transition-colors">
+                  Transaction Details
+                  <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${detailsOpen ? "rotate-180" : ""}`} />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <TransactionDetails selectedTxid={selectedTxid} />
+                </CollapsibleContent>
+              </Collapsible>
+              <Collapsible open={labelsOpen} onOpenChange={setLabelsOpen}>
+                <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-2 text-sm font-semibold text-foreground border-b border-border hover:bg-muted/50 transition-colors">
+                  Label Editor
+                  <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${labelsOpen ? "rotate-180" : ""}`} />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <LabelEditor selectedTxid={selectedTxid} />
+                </CollapsibleContent>
+              </Collapsible>
+            </>
+          ) : (
+            <>
+              <div className="flex-1 md:border-r border-border overflow-hidden md:min-h-0">
+                <TransactionDetails selectedTxid={selectedTxid} />
+              </div>
+              <div className="flex-1 overflow-hidden border-t md:border-t-0 border-border md:min-h-0">
+                <LabelEditor selectedTxid={selectedTxid} />
+              </div>
+            </>
+          )}
         </div>
       </div>
 

@@ -53,7 +53,7 @@ export function TransactionDetails({ selectedTxid }: TransactionDetailsProps) {
 
   return (
     <div key={selectedTxid} className="p-4 space-y-3 overflow-y-auto text-sm animate-fade-in">
-      <h3 className="font-semibold text-foreground">Transaction Details</h3>
+      <h3 className="font-semibold text-foreground hidden md:block">Transaction Details</h3>
 
       <div className="flex items-center gap-2">
         <span className="text-muted-foreground">TXID:</span>
