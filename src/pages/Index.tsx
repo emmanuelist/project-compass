@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { ChevronDown } from "lucide-react";
 import { fetchGraph } from "@/lib/api";
 import { Header } from "@/components/Header";
 import { TransactionGraph } from "@/components/TransactionGraph";
@@ -8,6 +9,8 @@ import { LabelEditor } from "@/components/LabelEditor";
 import { ImportModal } from "@/components/ImportModal";
 import { ExportModal } from "@/components/ExportModal";
 import { ConnectionBanner } from "@/components/ConnectionBanner";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
