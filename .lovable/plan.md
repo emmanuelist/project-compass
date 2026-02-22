@@ -1,98 +1,144 @@
 
 
-# Production-Grade UI/UX Overhaul
+# The Ultimate UI/UX Overhaul -- "Wow Factor" Edition
 
-## Overview
-Transform the current functional prototype into a polished, enterprise-ready Bitcoin transaction explorer with improved visual hierarchy, better information density, keyboard shortcuts, resizable panels, a professional status bar, graph legend, and refined micro-interactions throughout.
+## What's Already Good
+The current UI has solid foundations: dark theme, glass-morphism, dot-grid backgrounds, resizable panels, graph legend, status bar, keyboard shortcuts, and clean typography. This plan builds on those foundations to add the visual drama, polish, and micro-interactions that separate a good tool from an exceptional one.
 
 ## Changes by Area
 
-### 1. Header Redesign (`src/components/Header.tsx`)
-- Add a subtle gradient separator line below the header for depth
-- Group actions into a proper toolbar with dividers between logical groups (brand | actions | search)
-- Add keyboard shortcut hint on the search input (`Ctrl+K` to focus)
-- Show a "Demo Mode" badge/pill next to the logo when demo is active (amber background, small text)
-- Add a tooltip on the Demo toggle explaining what it does
-- Improve search input with a subtle search icon inside the input (prefix icon pattern) instead of a separate button on small screens
+### 1. Animated Gradient Accent Line + Header Glow
+**File: `src/index.css`, `src/components/Header.tsx`**
 
-### 2. Graph Panel Enhancements (`src/components/TransactionGraph.tsx`)
-- **Graph Legend**: Add a compact legend overlay (top-left) showing node color meanings: blue = Regular, green = Labeled, gray = Coinbase, orange = Selected
-- **Better Empty State**: Replace plain text with an illustrated empty state -- a centered Bitcoin icon with concentric dashed rings and instructional text with a "Try Demo Mode" call-to-action button
-- **Zoom controls**: Add tooltip labels to zoom buttons, add a "Reset Layout" button, and style with glass-morphism (backdrop-blur + semi-transparent bg)
-- **Node count badge**: Show "8 nodes, 7 edges" count in bottom-left corner
-- **Hover cursor**: Set cursor to pointer on nodes via Cytoscape styles
+Replace the static `gradient-border-bottom` with a slowly animating gradient that sweeps left-to-right using the Bitcoin orange and blue accent colors. This creates a living, breathing header border that immediately signals premium quality. Add a subtle radial glow behind the Bitcoin logo icon that pulses softly.
 
-### 3. Resizable Panels (`src/pages/Index.tsx`)
-- Replace the fixed flex layout with `react-resizable-panels` (already installed) for the graph vs. details split and the details vs. label editor split
-- Add subtle resize handles with a grip indicator
-- Persist panel sizes to localStorage
-- Keep mobile layout as collapsible accordion (unchanged)
+### 2. Graph Node Glow Effects + Animated Edges
+**File: `src/components/TransactionGraph.tsx`**
 
-### 4. Transaction Details Polish (`src/components/TransactionDetails.tsx`)
-- Add a section header with an icon (FileText)
-- TXID row: show full truncated ID in a styled code block with a copy button that shows a checkmark animation on success
-- Add colored confirmation badge: green "Confirmed" for high confirmations, yellow "Recent" for low
-- Format BTC values with subtle BTC symbol styling
-- Inputs/Outputs: default to open state, show as a styled table with alternating row colors, address column with copy-on-click, and value column right-aligned
-- Add a "View on Mempool" button styled as a proper secondary button instead of just a tiny icon
-- Better loading skeleton with proper content-shaped placeholders
+- Add a soft outer glow/shadow on nodes using Cytoscape's shadow styles -- selected nodes get an orange glow halo, labeled nodes get a green glow, regular nodes a subtle blue glow
+- Animate edges on hover: thicken the line and brighten the color when hovering over an edge
+- Add a "ripple" effect on node selection: when a node is clicked, briefly flash its border outward (via a Cytoscape animation callback)
+- Increase node size slightly (32px) for better touch targets and visual presence
 
-### 5. Label Editor Polish (`src/components/LabelEditor.tsx`)
-- Redesign form with proper field labels (not just placeholders)
-- Add form field descriptions (small helper text under each field)
-- Style existing labels as cards/chips with tag icon, hover highlight, and action buttons that appear on hover
-- Add an "editing" visual state: highlight the form with a colored left border when editing an existing label
-- Show label count in section header ("Labels (3)")
-- Better empty state when no labels exist: "No labels yet. Add one above."
+### 3. Command Palette (Cmd+K)
+**Files: `src/components/CommandPalette.tsx` (new), `src/pages/Index.tsx`**
 
-### 6. Status Bar (new: `src/components/StatusBar.tsx`)
-- A thin footer bar at the bottom of the screen showing:
-  - Connection status indicator (green dot = connected, red = disconnected, hidden in demo mode)
-  - Selected transaction TXID (truncated, clickable to copy)
-  - Node/edge count from current graph
-  - "Demo Mode" indicator when active
-- Monospace font, muted colors, very compact (h-7)
+Replace the simple search focus with a full command palette using the existing `cmdk` dependency (already installed). The palette provides:
+- Search for transaction ID (top result)
+- Quick actions: Toggle Demo Mode, Import Labels, Export Labels, Fit Graph, Reset Layout
+- Recent transactions (from localStorage history)
 
-### 7. Connection Banner Improvement (`src/components/ConnectionBanner.tsx`)
-- Add a dismiss button (X) that hides the banner for the session
-- Add a "Try Demo Mode" link/button within the banner text
+This is a signature "power user" feature that signals professional-grade tooling.
 
-### 8. Global CSS & Theme Refinements (`src/index.css`)
-- Add custom scrollbar styling (thin, dark-themed) for all scrollable areas
-- Add focus-visible ring styles for keyboard navigation accessibility
-- Add a subtle dot-grid background pattern on the graph area for depth
-- Refine border colors for slightly more contrast
+### 4. Animated Number Counters
+**File: `src/components/StatusBar.tsx`, `src/components/TransactionDetails.tsx`**
 
-### 9. Keyboard Shortcuts
-- `Ctrl/Cmd + K`: Focus search input
-- `Escape`: Deselect current node (clear selectedTxid)
-- Handle in `Index.tsx` with a `useEffect` for keydown
+When node/edge counts change or BTC values appear, animate the numbers counting up from 0 to the final value using a small custom hook (`useAnimatedNumber`). This applies to:
+- Status bar node/edge counts
+- Transaction details: confirmations count, BTC value
+- Graph overlay node/edge badge
 
-### 10. Import/Export Modals Polish (`src/components/ImportModal.tsx`, `src/components/ExportModal.tsx`)
-- Add file size display after selection
-- Add a progress indicator during import
-- Export modal: show label breakdown by type (tx: 3, addr: 1, etc.)
-- Better drag-and-drop zone with dashed animated border on dragover
+### 5. Breadcrumb Trail for Graph Navigation
+**File: `src/components/GraphBreadcrumb.tsx` (new), `src/pages/Index.tsx`**
+
+Add a horizontal breadcrumb bar just below the header showing the chain of selected transactions as clickable pills. Clicking a breadcrumb re-selects that node. Shows truncated txids with a subtle fade-out on the left when the trail gets long. This gives users spatial memory of their exploration path.
+
+### 6. Transaction Details -- Card-Based Layout with Sparklines
+**File: `src/components/TransactionDetails.tsx`**
+
+Replace the flat info grid with mini-cards for each metric:
+- Each metric (Status, Confirmations, Value, Time) gets its own rounded card with an icon, label, and value
+- Cards are arranged in a 2x2 grid
+- The Value card shows a tiny inline sparkline-style bar indicating the value relative to total inputs
+- Confirmation card background subtly tints green/yellow/red based on status
+
+### 7. Floating Action Button (FAB) for Quick Actions on Mobile
+**File: `src/components/FloatingActions.tsx` (new), `src/pages/Index.tsx`**
+
+On mobile, add a floating action button (bottom-right) that expands into a radial menu with: Import, Export, Toggle Demo, Fit Graph. Uses scale-in animation with staggered delays for each sub-button. Desktop hides this since actions are in the header.
+
+### 8. Skeleton Shimmer Animations
+**File: `src/index.css`, `tailwind.config.ts`**
+
+Upgrade the shimmer utility to actually animate (currently static). Add the `animate-shimmer` class that moves the gradient across loading skeletons. Apply to all skeleton instances in TransactionDetails and any loading state.
+
+### 9. Tooltip Previews on Graph Nodes
+**File: `src/components/TransactionGraph.tsx`**
+
+When hovering over a graph node, show a floating tooltip (HTML overlay positioned near the cursor) with:
+- Truncated TXID
+- BTC value
+- Label (if any)
+- "Click to inspect" hint
+
+This uses Cytoscape's `mouseover` event and a small absolutely-positioned React div, not Cytoscape's native tooltips (which are ugly).
+
+### 10. Panel Headers with Collapse/Expand Icons
+**File: `src/components/TransactionDetails.tsx`, `src/components/LabelEditor.tsx`, `src/pages/Index.tsx`**
+
+Add proper panel header bars at the top of each resizable panel with:
+- Title + icon (already partially there)
+- A collapse button that minimizes the panel to just the header bar
+- A subtle bottom border separator
+
+### 11. Edge Label Badges
+**File: `src/components/TransactionGraph.tsx`**
+
+Style edge labels as pill-shaped badges with a dark background and Bitcoin orange text, rather than plain floating text. This uses Cytoscape's `text-background-color`, `text-background-opacity`, `text-background-padding`, and `text-background-shape: roundrectangle` styles.
+
+### 12. Onboarding Spotlight / First-Run Experience
+**File: `src/components/OnboardingOverlay.tsx` (new), `src/pages/Index.tsx`**
+
+On first visit (checked via localStorage flag), show a translucent overlay with 3 numbered callout bubbles pointing at:
+1. The search bar -- "Search any Bitcoin transaction"
+2. The Demo toggle -- "Or explore with sample data"
+3. The graph area -- "Visualize transaction ancestry"
+
+A "Got it" button dismisses and sets the localStorage flag. Subtle fade + scale entrance animation.
+
+### 13. Enhanced Empty States with Particle Background
+**File: `src/components/TransactionGraph.tsx`, `src/index.css`**
+
+Add a CSS-only floating particle effect to the empty graph state -- small dots that slowly drift upward using CSS keyframe animations. This creates movement and life in the otherwise static empty state, making users want to interact. Implemented with 6-8 absolutely positioned small circles with varying animation durations and delays.
+
+### 14. Copy Feedback Upgrade
+**File: `src/components/TransactionDetails.tsx`, `src/components/StatusBar.tsx`**
+
+Replace the simple icon swap with a small animated toast that appears inline near the copy button -- a tiny green "Copied!" pill that slides in and fades out after 1.5s. More satisfying than just swapping an icon.
+
+### 15. Keyboard Shortcut Cheat Sheet
+**File: `src/components/KeyboardShortcuts.tsx` (new), `src/pages/Index.tsx`**
+
+Press `?` to open a small modal showing all keyboard shortcuts in a clean two-column table:
+- Cmd+K: Command palette
+- Escape: Deselect node
+- ?: Show shortcuts
+
+This is a hallmark of professional desktop applications.
+
+---
 
 ## Technical Details
 
-**Files created:**
-- `src/components/StatusBar.tsx` -- New status bar component
-- `src/components/GraphLegend.tsx` -- Graph color legend overlay
+**New files created (6):**
+- `src/components/CommandPalette.tsx` -- Command palette using cmdk
+- `src/components/GraphBreadcrumb.tsx` -- Transaction navigation breadcrumb
+- `src/components/FloatingActions.tsx` -- Mobile FAB menu
+- `src/components/OnboardingOverlay.tsx` -- First-run spotlight
+- `src/components/KeyboardShortcuts.tsx` -- Shortcut cheat sheet modal
+- `src/hooks/use-animated-number.ts` -- Number counter animation hook
 
-**Files modified:**
-- `src/pages/Index.tsx` -- Resizable panels, keyboard shortcuts, status bar integration
-- `src/components/Header.tsx` -- Toolbar redesign, Ctrl+K, demo badge, tooltips
-- `src/components/TransactionGraph.tsx` -- Legend, empty state CTA, node stats, cursor, glass controls
-- `src/components/TransactionDetails.tsx` -- Confirmation badge, table layout, copy animation, open by default
-- `src/components/LabelEditor.tsx` -- Field labels, card-style labels, editing indicator, count
-- `src/components/ConnectionBanner.tsx` -- Dismiss button, demo mode CTA
-- `src/components/ImportModal.tsx` -- File size, animated drop zone
-- `src/components/ExportModal.tsx` -- Label type breakdown
-- `src/index.css` -- Custom scrollbars, dot grid bg, focus styles
-- `tailwind.config.ts` -- Any new animation keyframes needed
+**Files modified (8):**
+- `src/pages/Index.tsx` -- Integrate command palette, breadcrumb, FAB, onboarding, shortcut modal, breadcrumb state tracking
+- `src/components/Header.tsx` -- Animated gradient border, logo glow, Cmd+K opens palette instead of focusing input
+- `src/components/TransactionGraph.tsx` -- Node glow shadows, edge label badges, hover tooltip overlay, ripple animation, particle empty state, larger nodes
+- `src/components/TransactionDetails.tsx` -- 2x2 metric cards, animated numbers, inline copy feedback
+- `src/components/LabelEditor.tsx` -- Panel header collapse button
+- `src/components/StatusBar.tsx` -- Animated number counters
+- `src/index.css` -- Animated gradient border keyframes, shimmer animation, floating particle keyframes, glow utilities
+- `tailwind.config.ts` -- New keyframes: gradient-sweep, float-up, inline-toast
 
-**No new dependencies required** -- uses `react-resizable-panels` (already installed), existing shadcn components, and Tailwind utilities.
+**No new dependencies** -- uses existing `cmdk`, `react-resizable-panels`, shadcn components, Cytoscape built-in styles, and CSS animations.
 
-**Scope**: This is a purely visual/UX upgrade. No changes to data flow, API layer, demo mode logic, or types. All existing functionality remains intact.
+**Scope**: Purely visual/UX. No changes to data flow, API layer, types, or demo mode logic. All existing functionality remains intact.
 
