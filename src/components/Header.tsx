@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Search, Upload, Download, Bitcoin, Loader2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -7,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { scaleIn } from "@/lib/motion";
 
 interface HeaderProps {
   onSearch: (txid: string) => void;
@@ -52,11 +54,21 @@ export function Header({ onSearch, onImportClick, onExportClick, isSearching, is
           <span className="text-lg font-bold tracking-tight text-foreground hidden sm:inline">
             KYCH
           </span>
-          {isDemoMode && (
-            <Badge variant="outline" className="border-primary/50 bg-primary/10 text-primary text-[10px] px-1.5 py-0 h-5">
-              DEMO
-            </Badge>
-          )}
+          <AnimatePresence>
+            {isDemoMode && (
+              <motion.div
+                layoutId="demo-badge"
+                variants={scaleIn}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+              >
+                <Badge variant="outline" className="border-primary/50 bg-primary/10 text-primary text-[10px] px-1.5 py-0 h-5">
+                  DEMO
+                </Badge>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         <Separator orientation="vertical" className="h-6 hidden sm:block" />

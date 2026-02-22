@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Copy } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAnimatedNumber } from "@/hooks/use-animated-number";
+import { scaleIn } from "@/lib/motion";
 import type { CytoscapeGraph } from "@/types";
 
 interface StatusBarProps {
@@ -12,7 +13,6 @@ interface StatusBarProps {
 }
 
 export function StatusBar({ selectedTxid, graphData, isDemoMode }: StatusBarProps) {
-  const { toast } = useToast();
   const [showCopyPill, setShowCopyPill] = useState(false);
 
   const { isError: isDisconnected } = useQuery({
@@ -63,11 +63,19 @@ export function StatusBar({ selectedTxid, graphData, isDemoMode }: StatusBarProp
       <div className="flex items-center gap-2">
         {selectedTxid && (
           <div className="relative">
-            {showCopyPill && (
-              <span className="absolute -top-5 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-[hsl(var(--success))] text-background text-[9px] font-medium copy-pill whitespace-nowrap">
-                Copied!
-              </span>
-            )}
+            <AnimatePresence>
+              {showCopyPill && (
+                <motion.span
+                  variants={scaleIn}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  className="absolute -top-5 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-[hsl(var(--success))] text-background text-[9px] font-medium whitespace-nowrap"
+                >
+                  Copied!
+                </motion.span>
+              )}
+            </AnimatePresence>
             <button
               onClick={copyTxid}
               className="flex items-center gap-1 hover:text-foreground transition-colors"
