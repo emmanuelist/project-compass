@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, Upload, Download, Bitcoin } from "lucide-react";
+import { Search, Upload, Download, Bitcoin, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
