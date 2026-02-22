@@ -1,7 +1,7 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown } from "lucide-react";
-import { fetchGraph } from "@/lib/api";
+import { fetchGraph, ApiError } from "@/lib/api";
 import { Header } from "@/components/Header";
 import { TransactionGraph } from "@/components/TransactionGraph";
 import { TransactionDetails } from "@/components/TransactionDetails";
