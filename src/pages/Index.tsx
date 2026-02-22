@@ -21,6 +21,9 @@ const Index = () => {
   const [selectedTxid, setSelectedTxid] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(true);
+  const [labelsOpen, setLabelsOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   const {
     data: graphData,
