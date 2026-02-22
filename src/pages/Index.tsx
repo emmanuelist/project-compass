@@ -28,7 +28,7 @@ const Index = () => {
   const {
     data: graphData,
     isLoading: graphLoading,
-    isError: graphError,
+    error: graphError,
   } = useQuery({
     queryKey: ["graph", searchTxid],
     queryFn: () => fetchGraph(searchTxid!, 3),
@@ -36,22 +36,22 @@ const Index = () => {
     retry: 1,
   });
 
-  const handleSearch = useCallback(
-    (txid: string) => {
-      setSearchTxid(txid);
-      setSelectedTxid(txid);
-    },
-    []
-  );
-
-  const handleNodeSelect = useCallback((txid: string) => {
-    setSelectedTxid(txid);
-  }, []);
-
-  // Show error toast when graph fetch fails
-  if (graphError && searchTxid) {
-    // handled via React Query error state
-  }
+  useEffect(() => {
+    if (!graphError) return;
+    if (graphError instanceof ApiError && graphError.status === 404) {
+      toast({
+        variant: "destructive",
+        title: "Transaction Not Found",
+        description: "No transaction exists with that ID. Please check and try again.",
+      });
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to fetch transaction. Please try again later.",
+      });
+    }
+  }, [graphError, toast]);
 
   return (
     <div className="flex flex-col h-screen bg-background">
