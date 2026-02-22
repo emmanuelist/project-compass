@@ -34,7 +34,7 @@ export function Header({ onSearch, onImportClick, onExportClick, isSearching }: 
   };
 
   return (
-    <header className="flex items-center gap-3 border-b border-border bg-card px-4 py-3">
+    <header className="flex flex-wrap items-center gap-3 border-b border-border bg-card px-4 py-3">
       <div className="flex items-center gap-2 shrink-0">
         <Bitcoin className="h-6 w-6 text-primary" />
         <span className="text-lg font-bold tracking-tight text-foreground hidden sm:inline">
@@ -42,7 +42,18 @@ export function Header({ onSearch, onImportClick, onExportClick, isSearching }: 
         </span>
       </div>
 
-      <div className="flex flex-1 items-center gap-2 max-w-2xl">
+      <div className="flex items-center gap-2 shrink-0">
+        <Button variant="outline" size="sm" onClick={onImportClick}>
+          <Upload className="h-4 w-4" />
+          <span className="hidden md:inline">Import</span>
+        </Button>
+        <Button variant="outline" size="sm" onClick={onExportClick}>
+          <Download className="h-4 w-4" />
+          <span className="hidden md:inline">Export</span>
+        </Button>
+      </div>
+
+      <div className="flex items-center gap-2 w-full sm:w-auto sm:flex-1 order-last sm:order-none mt-2 sm:mt-0 max-w-2xl">
         <Input
           className={`font-mono text-sm transition-shadow duration-300 ${isSearching ? "ring-2 ring-primary/40" : ""}`}
           placeholder="Enter transaction ID (64-char hex)"
@@ -54,17 +65,6 @@ export function Header({ onSearch, onImportClick, onExportClick, isSearching }: 
         <Button onClick={handleSearch} disabled={isSearching} size="sm">
           {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
           <span className="hidden sm:inline">{isSearching ? "Searching" : "Search"}</span>
-        </Button>
-      </div>
-
-      <div className="flex items-center gap-2 shrink-0">
-        <Button variant="outline" size="sm" onClick={onImportClick}>
-          <Upload className="h-4 w-4" />
-          <span className="hidden md:inline">Import</span>
-        </Button>
-        <Button variant="outline" size="sm" onClick={onExportClick}>
-          <Download className="h-4 w-4" />
-          <span className="hidden md:inline">Export</span>
         </Button>
       </div>
     </header>
