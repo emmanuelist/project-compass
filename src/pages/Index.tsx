@@ -3,13 +3,18 @@ import { useQuery } from "@tanstack/react-query";
 import { ChevronDown } from "lucide-react";
 import { fetchGraph, ApiError } from "@/lib/api";
 import { Header } from "@/components/Header";
-import { TransactionGraph } from "@/components/TransactionGraph";
+import { TransactionGraph, TransactionGraphHandle } from "@/components/TransactionGraph";
 import { TransactionDetails } from "@/components/TransactionDetails";
 import { LabelEditor } from "@/components/LabelEditor";
 import { ImportModal } from "@/components/ImportModal";
 import { ExportModal } from "@/components/ExportModal";
 import { ConnectionBanner } from "@/components/ConnectionBanner";
 import { StatusBar } from "@/components/StatusBar";
+import { CommandPalette } from "@/components/CommandPalette";
+import { GraphBreadcrumb } from "@/components/GraphBreadcrumb";
+import { FloatingActions } from "@/components/FloatingActions";
+import { OnboardingOverlay } from "@/components/OnboardingOverlay";
+import { KeyboardShortcuts } from "@/components/KeyboardShortcuts";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -27,8 +32,12 @@ function IndexContent() {
   const [exportOpen, setExportOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(true);
   const [labelsOpen, setLabelsOpen] = useState(false);
+  const [commandOpen, setCommandOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [breadcrumbTrail, setBreadcrumbTrail] = useState<string[]>([]);
   const isMobile = useIsMobile();
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const graphRef = useRef<TransactionGraphHandle>(null);
 
   const {
     data: graphData,
@@ -58,25 +67,27 @@ function IndexContent() {
     }
   }, [graphError, toast]);
 
-  // Auto-select demo data when demo mode is activated
   useEffect(() => {
     if (isDemoMode) {
       setSearchTxid(defaultDemoTxid);
       setSelectedTxid(defaultDemoTxid);
+      setBreadcrumbTrail([defaultDemoTxid]);
     }
   }, [isDemoMode, defaultDemoTxid]);
 
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      // Ctrl/Cmd + K -> focus search
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
-        searchInputRef.current?.focus();
+        setCommandOpen(true);
       }
-      // Escape -> deselect node
       if (e.key === "Escape") {
         setSelectedTxid(null);
+      }
+      if (e.key === "?" && !e.metaKey && !e.ctrlKey && !(e.target instanceof HTMLInputElement) && !(e.target instanceof HTMLTextAreaElement)) {
+        e.preventDefault();
+        setShortcutsOpen(true);
       }
     };
     window.addEventListener("keydown", handler);
@@ -87,12 +98,28 @@ function IndexContent() {
     (txid: string) => {
       setSearchTxid(txid);
       setSelectedTxid(txid);
+      setBreadcrumbTrail((prev) => {
+        if (prev[prev.length - 1] === txid) return prev;
+        return [...prev, txid];
+      });
     },
     []
   );
 
   const handleNodeSelect = useCallback((txid: string) => {
     setSelectedTxid(txid);
+    setBreadcrumbTrail((prev) => {
+      if (prev[prev.length - 1] === txid) return prev;
+      return [...prev, txid];
+    });
+  }, []);
+
+  const handleBreadcrumbSelect = useCallback((txid: string) => {
+    setSelectedTxid(txid);
+    setBreadcrumbTrail((prev) => {
+      const idx = prev.indexOf(txid);
+      return idx >= 0 ? prev.slice(0, idx + 1) : prev;
+    });
   }, []);
 
   const handleDemoActivate = useCallback(() => {
@@ -104,6 +131,7 @@ function IndexContent() {
 
   return (
     <div className="flex flex-col h-screen bg-background">
+      <OnboardingOverlay />
       {!isDemoMode && <ConnectionBanner onDemoActivate={handleDemoActivate} />}
       <Header
         onSearch={handleSearch}
@@ -113,12 +141,15 @@ function IndexContent() {
         isDemoMode={isDemoMode}
         onDemoToggle={toggleDemoMode}
         searchInputRef={searchInputRef}
+        onCommandPalette={() => setCommandOpen(true)}
       />
+      <GraphBreadcrumb trail={breadcrumbTrail} onSelect={handleBreadcrumbSelect} />
 
       {isMobile ? (
         <div className="flex-1 overflow-y-auto">
           <div className="h-[50vh] min-h-[250px] flex">
             <TransactionGraph
+              ref={graphRef}
               graphData={activeGraphData}
               isLoading={activeLoading}
               onNodeSelect={handleNodeSelect}
@@ -146,6 +177,14 @@ function IndexContent() {
               </CollapsibleContent>
             </Collapsible>
           </div>
+
+          <FloatingActions
+            onImport={() => setImportOpen(true)}
+            onExport={() => setExportOpen(true)}
+            onToggleDemo={toggleDemoMode}
+            onFitGraph={() => graphRef.current?.fitGraph()}
+            isDemoMode={isDemoMode}
+          />
         </div>
       ) : (
         <ResizablePanelGroup
@@ -153,12 +192,10 @@ function IndexContent() {
           className="flex-1 min-h-0"
           onLayout={(sizes) => localStorage.setItem("kych_panel_v", JSON.stringify(sizes))}
         >
-          <ResizablePanel
-            defaultSize={60}
-            minSize={30}
-          >
+          <ResizablePanel defaultSize={60} minSize={30}>
             <div className="h-full flex">
               <TransactionGraph
+                ref={graphRef}
                 graphData={activeGraphData}
                 isLoading={activeLoading}
                 onNodeSelect={handleNodeSelect}
@@ -169,10 +206,7 @@ function IndexContent() {
 
           <ResizableHandle withHandle />
 
-          <ResizablePanel
-            defaultSize={40}
-            minSize={20}
-          >
+          <ResizablePanel defaultSize={40} minSize={20}>
             <ResizablePanelGroup
               direction="horizontal"
               onLayout={(sizes) => localStorage.setItem("kych_panel_h", JSON.stringify(sizes))}
@@ -203,6 +237,19 @@ function IndexContent() {
 
       <ImportModal open={importOpen} onOpenChange={setImportOpen} />
       <ExportModal open={exportOpen} onOpenChange={setExportOpen} />
+      <CommandPalette
+        open={commandOpen}
+        onOpenChange={setCommandOpen}
+        onSearch={handleSearch}
+        onToggleDemo={toggleDemoMode}
+        onImport={() => setImportOpen(true)}
+        onExport={() => setExportOpen(true)}
+        onFitGraph={() => graphRef.current?.fitGraph()}
+        onResetLayout={() => graphRef.current?.resetLayout()}
+        onShowShortcuts={() => setShortcutsOpen(true)}
+        isDemoMode={isDemoMode}
+      />
+      <KeyboardShortcuts open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
     </div>
   );
 }

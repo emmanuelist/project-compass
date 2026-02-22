@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Copy, ExternalLink, ChevronDown, ChevronRight, FileText, Check } from "lucide-react";
+import { Copy, ExternalLink, ChevronDown, ChevronRight, FileText, Check, Shield, Hash, Coins, Clock } from "lucide-react";
 import { fetchTransaction } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,9 +8,19 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { useDemoMode } from "@/hooks/use-demo-mode";
+import { useAnimatedNumber } from "@/hooks/use-animated-number";
 
 interface TransactionDetailsProps {
   selectedTxid: string | null;
+}
+
+function CopyPill({ show }: { show: boolean }) {
+  if (!show) return null;
+  return (
+    <span className="absolute -top-6 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-[hsl(var(--success))] text-[hsl(var(--success-foreground,0_0%_100%))] text-[10px] font-medium copy-pill whitespace-nowrap">
+      Copied!
+    </span>
+  );
 }
 
 export function TransactionDetails({ selectedTxid }: TransactionDetailsProps) {
@@ -19,6 +29,7 @@ export function TransactionDetails({ selectedTxid }: TransactionDetailsProps) {
   const [inputsOpen, setInputsOpen] = useState(true);
   const [outputsOpen, setOutputsOpen] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [showCopyPill, setShowCopyPill] = useState(false);
 
   const { data: apiTx, isLoading } = useQuery({
     queryKey: ["transaction", selectedTxid],
@@ -28,12 +39,15 @@ export function TransactionDetails({ selectedTxid }: TransactionDetailsProps) {
 
   const tx = isDemoMode ? (selectedTxid ? getDemoTransaction(selectedTxid) : undefined) : apiTx;
 
+  const animConfirmations = useAnimatedNumber(tx?.confirmations ?? 0);
+
   const copyTxid = () => {
     if (selectedTxid) {
       navigator.clipboard.writeText(selectedTxid);
       setCopied(true);
-      toast({ title: "Copied", description: "Transaction ID copied to clipboard." });
+      setShowCopyPill(true);
       setTimeout(() => setCopied(false), 2000);
+      setTimeout(() => setShowCopyPill(false), 1500);
     }
   };
 
@@ -64,10 +78,10 @@ export function TransactionDetails({ selectedTxid }: TransactionDetailsProps) {
         </div>
         <Skeleton className="h-8 w-full shimmer-bg rounded-md" />
         <div className="grid grid-cols-2 gap-3">
-          <Skeleton className="h-4 w-24 shimmer-bg" />
-          <Skeleton className="h-4 w-16 shimmer-bg" />
-          <Skeleton className="h-4 w-20 shimmer-bg" />
-          <Skeleton className="h-4 w-28 shimmer-bg" />
+          <Skeleton className="h-16 shimmer-bg rounded-lg" />
+          <Skeleton className="h-16 shimmer-bg rounded-lg" />
+          <Skeleton className="h-16 shimmer-bg rounded-lg" />
+          <Skeleton className="h-16 shimmer-bg rounded-lg" />
         </div>
         <Skeleton className="h-20 w-full shimmer-bg rounded-md" />
       </div>
@@ -76,11 +90,19 @@ export function TransactionDetails({ selectedTxid }: TransactionDetailsProps) {
 
   if (!tx) return null;
 
-  const confirmationBadge = tx.confirmations >= 6
-    ? <Badge variant="outline" className="border-[hsl(var(--success))]/30 bg-[hsl(var(--success))]/10 text-[hsl(var(--success))] text-[10px] px-1.5 py-0 h-5">Confirmed</Badge>
+  const confirmBg = tx.confirmations >= 6
+    ? "bg-[hsl(var(--success))]/10 border-[hsl(var(--success))]/20"
     : tx.confirmations > 0
-    ? <Badge variant="outline" className="border-[hsl(var(--warning))]/30 bg-[hsl(var(--warning))]/10 text-[hsl(var(--warning))] text-[10px] px-1.5 py-0 h-5">Recent ({tx.confirmations})</Badge>
-    : <Badge variant="outline" className="border-destructive/30 bg-destructive/10 text-destructive text-[10px] px-1.5 py-0 h-5">Unconfirmed</Badge>;
+    ? "bg-[hsl(var(--warning))]/10 border-[hsl(var(--warning))]/20"
+    : "bg-destructive/10 border-destructive/20";
+
+  const confirmColor = tx.confirmations >= 6
+    ? "text-[hsl(var(--success))]"
+    : tx.confirmations > 0
+    ? "text-[hsl(var(--warning))]"
+    : "text-destructive";
+
+  const confirmLabel = tx.confirmations >= 6 ? "Confirmed" : tx.confirmations > 0 ? "Recent" : "Unconfirmed";
 
   return (
     <div key={selectedTxid} className="p-4 space-y-4 overflow-y-auto text-sm animate-fade-in h-full">
@@ -91,28 +113,51 @@ export function TransactionDetails({ selectedTxid }: TransactionDetailsProps) {
       </div>
 
       {/* TXID */}
-      <div className="flex items-center gap-2 bg-muted/50 rounded-md px-3 py-2 border border-border">
+      <div className="relative flex items-center gap-2 bg-muted/50 rounded-md px-3 py-2 border border-border">
         <code className="font-mono text-xs text-foreground flex-1 truncate">{truncate(tx.txid)}</code>
-        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={copyTxid}>
-          {copied ? <Check className="h-3 w-3 text-[hsl(var(--success))]" /> : <Copy className="h-3 w-3" />}
-        </Button>
+        <div className="relative">
+          <CopyPill show={showCopyPill} />
+          <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={copyTxid}>
+            {copied ? <Check className="h-3 w-3 text-[hsl(var(--success))]" /> : <Copy className="h-3 w-3" />}
+          </Button>
+        </div>
       </div>
 
-      {/* Info grid */}
-      <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
-        <span className="text-muted-foreground text-xs">Status</span>
-        <div>{confirmationBadge}</div>
+      {/* Metric cards - 2x2 grid */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className={`rounded-lg border p-2.5 ${confirmBg}`}>
+          <div className="flex items-center gap-1.5 mb-1">
+            <Shield className={`h-3 w-3 ${confirmColor}`} />
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Status</span>
+          </div>
+          <span className={`text-xs font-semibold ${confirmColor}`}>{confirmLabel}</span>
+        </div>
 
-        <span className="text-muted-foreground text-xs">Confirmations</span>
-        <span className="text-foreground text-xs font-mono">{tx.confirmations.toLocaleString()}</span>
+        <div className="rounded-lg border border-border bg-card/50 p-2.5">
+          <div className="flex items-center gap-1.5 mb-1">
+            <Hash className="h-3 w-3 text-accent" />
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Confirmations</span>
+          </div>
+          <span className="text-xs font-semibold font-mono text-foreground">{animConfirmations.toLocaleString()}</span>
+        </div>
 
-        <span className="text-muted-foreground text-xs">Value</span>
-        <span className="font-mono text-xs text-foreground">
-          {tx.total_value.toFixed(8)} <span className="text-primary">BTC</span>
-        </span>
+        <div className="rounded-lg border border-border bg-card/50 p-2.5">
+          <div className="flex items-center gap-1.5 mb-1">
+            <Coins className="h-3 w-3 text-primary" />
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Value</span>
+          </div>
+          <span className="font-mono text-xs font-semibold text-foreground">
+            {tx.total_value.toFixed(8)} <span className="text-primary text-[10px]">BTC</span>
+          </span>
+        </div>
 
-        <span className="text-muted-foreground text-xs">Time</span>
-        <span className="text-foreground text-xs">{new Date(tx.timestamp * 1000).toLocaleString()}</span>
+        <div className="rounded-lg border border-border bg-card/50 p-2.5">
+          <div className="flex items-center gap-1.5 mb-1">
+            <Clock className="h-3 w-3 text-muted-foreground" />
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Time</span>
+          </div>
+          <span className="text-[11px] text-foreground">{new Date(tx.timestamp * 1000).toLocaleString()}</span>
+        </div>
       </div>
 
       {/* Inputs */}
