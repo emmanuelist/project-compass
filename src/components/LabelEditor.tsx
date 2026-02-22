@@ -82,7 +82,7 @@ export function LabelEditor({ selectedTxid }: LabelEditorProps) {
 
   return (
     <div key={selectedTxid} className="p-4 space-y-3 overflow-y-auto text-sm animate-fade-in">
-      <h3 className="font-semibold text-foreground">Label Editor</h3>
+      <h3 className="font-semibold text-foreground hidden md:block">Label Editor</h3>
 
       <div className="space-y-2">
         <Select value={labelType} onValueChange={(v) => setLabelType(v as LabelType)}>

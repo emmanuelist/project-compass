@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { ChevronDown } from "lucide-react";
 import { fetchGraph } from "@/lib/api";
 import { Header } from "@/components/Header";
 import { TransactionGraph } from "@/components/TransactionGraph";
@@ -8,6 +9,8 @@ import { LabelEditor } from "@/components/LabelEditor";
 import { ImportModal } from "@/components/ImportModal";
 import { ExportModal } from "@/components/ExportModal";
 import { ConnectionBanner } from "@/components/ConnectionBanner";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
@@ -18,6 +21,9 @@ const Index = () => {
   const [selectedTxid, setSelectedTxid] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(true);
+  const [labelsOpen, setLabelsOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   const {
     data: graphData,
@@ -69,12 +75,37 @@ const Index = () => {
 
         {/* Bottom panels */}
         <div className="flex flex-col md:flex-row md:flex-[2] md:min-h-0 border-t border-border">
-          <div className="flex-1 md:border-r border-border overflow-hidden min-h-[200px] md:min-h-0">
-            <TransactionDetails selectedTxid={selectedTxid} />
-          </div>
-          <div className="flex-1 overflow-hidden border-t md:border-t-0 border-border min-h-[200px] md:min-h-0">
-            <LabelEditor selectedTxid={selectedTxid} />
-          </div>
+          {isMobile ? (
+            <>
+              <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
+                <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-2 text-sm font-semibold text-foreground border-b border-border hover:bg-muted/50 transition-colors">
+                  Transaction Details
+                  <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${detailsOpen ? "rotate-180" : ""}`} />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <TransactionDetails selectedTxid={selectedTxid} />
+                </CollapsibleContent>
+              </Collapsible>
+              <Collapsible open={labelsOpen} onOpenChange={setLabelsOpen}>
+                <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-2 text-sm font-semibold text-foreground border-b border-border hover:bg-muted/50 transition-colors">
+                  Label Editor
+                  <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${labelsOpen ? "rotate-180" : ""}`} />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <LabelEditor selectedTxid={selectedTxid} />
+                </CollapsibleContent>
+              </Collapsible>
+            </>
+          ) : (
+            <>
+              <div className="flex-1 md:border-r border-border overflow-hidden md:min-h-0">
+                <TransactionDetails selectedTxid={selectedTxid} />
+              </div>
+              <div className="flex-1 overflow-hidden border-t md:border-t-0 border-border md:min-h-0">
+                <LabelEditor selectedTxid={selectedTxid} />
+              </div>
+            </>
+          )}
         </div>
       </div>
 
