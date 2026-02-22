@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
+import { useDemoMode } from "@/hooks/use-demo-mode";
 
 interface TransactionDetailsProps {
   selectedTxid: string | null;
@@ -13,14 +14,17 @@ interface TransactionDetailsProps {
 
 export function TransactionDetails({ selectedTxid }: TransactionDetailsProps) {
   const { toast } = useToast();
+  const { isDemoMode, getDemoTransaction } = useDemoMode();
   const [inputsOpen, setInputsOpen] = useState(false);
   const [outputsOpen, setOutputsOpen] = useState(false);
 
-  const { data: tx, isLoading } = useQuery({
+  const { data: apiTx, isLoading } = useQuery({
     queryKey: ["transaction", selectedTxid],
     queryFn: () => fetchTransaction(selectedTxid!),
-    enabled: !!selectedTxid,
+    enabled: !!selectedTxid && !isDemoMode,
   });
+
+  const tx = isDemoMode ? (selectedTxid ? getDemoTransaction(selectedTxid) : undefined) : apiTx;
 
   const copyTxid = () => {
     if (selectedTxid) {
@@ -39,7 +43,7 @@ export function TransactionDetails({ selectedTxid }: TransactionDetailsProps) {
     );
   }
 
-  if (isLoading) {
+  if (!isDemoMode && isLoading) {
     return (
       <div className="p-4 space-y-3 animate-fade-in">
         {[48, 32, 40, 36].map((w, i) => (
