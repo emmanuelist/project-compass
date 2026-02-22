@@ -9,7 +9,7 @@ import type { CytoscapeGraph } from "@/types";
 
 dagre(cytoscape);
 
-const STYLESHEET: cytoscape.StylesheetCSS[] = [
+const STYLESHEET: cytoscape.StylesheetStyle[] = [
   {
     selector: "node",
     style: {
