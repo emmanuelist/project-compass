@@ -1,144 +1,81 @@
 
 
-# The Ultimate UI/UX Overhaul -- "Wow Factor" Edition
+# Framer Motion Animations Integration
 
-## What's Already Good
-The current UI has solid foundations: dark theme, glass-morphism, dot-grid backgrounds, resizable panels, graph legend, status bar, keyboard shortcuts, and clean typography. This plan builds on those foundations to add the visual drama, polish, and micro-interactions that separate a good tool from an exceptional one.
+## Overview
+Add `framer-motion` for physics-based, interruptible animations across the app -- replacing CSS-only `animate-fade-in` / `animate-scale-in` with smoother, spring-driven transitions that feel more alive. This covers page-level mounts, panel content swaps, graph overlay entrance/exit, breadcrumb pill additions, FAB expansion, onboarding steps, toast feedback, and connection banner slide-in/out.
 
-## Changes by Area
+## What Changes
 
-### 1. Animated Gradient Accent Line + Header Glow
-**File: `src/index.css`, `src/components/Header.tsx`**
+### 1. Install framer-motion
+Add `framer-motion` as a dependency (the only new package).
 
-Replace the static `gradient-border-bottom` with a slowly animating gradient that sweeps left-to-right using the Bitcoin orange and blue accent colors. This creates a living, breathing header border that immediately signals premium quality. Add a subtle radial glow behind the Bitcoin logo icon that pulses softly.
+### 2. Shared animation variants helper
+**New file: `src/lib/motion.ts`**
 
-### 2. Graph Node Glow Effects + Animated Edges
-**File: `src/components/TransactionGraph.tsx`**
+A small file exporting reusable variant objects and transition presets so every component uses consistent spring physics:
+- `fadeInUp` -- fade + translateY for content sections
+- `scaleIn` -- scale from 0.95 with opacity
+- `slideDown` -- for banners sliding in from top
+- `staggerContainer` -- parent variant that staggers children
+- `springTransition` -- shared spring config (stiffness: 300, damping: 24)
 
-- Add a soft outer glow/shadow on nodes using Cytoscape's shadow styles -- selected nodes get an orange glow halo, labeled nodes get a green glow, regular nodes a subtle blue glow
-- Animate edges on hover: thicken the line and brighten the color when hovering over an edge
-- Add a "ripple" effect on node selection: when a node is clicked, briefly flash its border outward (via a Cytoscape animation callback)
-- Increase node size slightly (32px) for better touch targets and visual presence
+### 3. Page-level entrance (`src/pages/Index.tsx`)
+Wrap the root `<div>` content in `<motion.div>` with `fadeInUp` on initial mount. The graph panel, details panel, and label editor each get `<AnimatePresence>` wrappers so content transitions (empty state to loaded, node selection changes) animate smoothly with crossfade.
 
-### 3. Command Palette (Cmd+K)
-**Files: `src/components/CommandPalette.tsx` (new), `src/pages/Index.tsx`**
+### 4. Connection Banner (`src/components/ConnectionBanner.tsx`)
+Wrap in `<motion.div>` with `slideDown` entry and slide-up exit via `<AnimatePresence>`. When dismissed, it slides up and fades out instead of instantly vanishing.
 
-Replace the simple search focus with a full command palette using the existing `cmdk` dependency (already installed). The palette provides:
-- Search for transaction ID (top result)
-- Quick actions: Toggle Demo Mode, Import Labels, Export Labels, Fit Graph, Reset Layout
-- Recent transactions (from localStorage history)
+### 5. Graph Breadcrumb pills (`src/components/GraphBreadcrumb.tsx`)
+Each breadcrumb pill becomes a `<motion.button>` using `layoutId` for smooth position transitions when the trail changes. New pills animate in with `scaleIn`; the entire bar uses `<AnimatePresence>` so it slides away when the trail is empty.
 
-This is a signature "power user" feature that signals professional-grade tooling.
+### 6. Transaction Details content swap (`src/components/TransactionDetails.tsx`)
+Wrap the entire return in `<AnimatePresence mode="wait">` keyed on `selectedTxid`. When the selected transaction changes, the old content fades out and the new content fades in with a subtle Y-shift -- giving the feeling of "flipping" between transaction cards. The 2x2 metric cards use staggered children (each card animates in 50ms apart).
 
-### 4. Animated Number Counters
-**File: `src/components/StatusBar.tsx`, `src/components/TransactionDetails.tsx`**
+### 7. Label Editor (`src/components/LabelEditor.tsx`)
+- The label list items use `<AnimatePresence>` + `<motion.div layout>` so adding/removing labels animates (new ones scale in, deleted ones scale out and collapse)
+- The editing border highlight animates via `motion.div`'s `animate` prop on `borderColor`/`backgroundColor` instead of a CSS class toggle
 
-When node/edge counts change or BTC values appear, animate the numbers counting up from 0 to the final value using a small custom hook (`useAnimatedNumber`). This applies to:
-- Status bar node/edge counts
-- Transaction details: confirmations count, BTC value
-- Graph overlay node/edge badge
+### 8. Floating Action Button (`src/components/FloatingActions.tsx`)
+Replace CSS `animate-scale-in` with framer-motion `<motion.div>` using spring-based scale + opacity. The sub-buttons fan out with staggered spring animations (more organic than CSS delays). The main FAB rotates its icon 45 degrees on open.
 
-### 5. Breadcrumb Trail for Graph Navigation
-**File: `src/components/GraphBreadcrumb.tsx` (new), `src/pages/Index.tsx`**
+### 9. Onboarding Overlay (`src/components/OnboardingOverlay.tsx`)
+- The backdrop fades in with `motion.div`
+- Each step card staggers in with `scaleIn` variant (replacing CSS `animationDelay`)
+- The "Got it" button pulses subtly with a spring scale on hover
+- On dismiss, the entire overlay fades out before unmounting (via `AnimatePresence`)
 
-Add a horizontal breadcrumb bar just below the header showing the chain of selected transactions as clickable pills. Clicking a breadcrumb re-selects that node. Shows truncated txids with a subtle fade-out on the left when the trail gets long. This gives users spatial memory of their exploration path.
+### 10. Graph panel overlays (`src/components/TransactionGraph.tsx`)
+- The node hover tooltip uses `<motion.div>` with `scaleIn` + `AnimatePresence` for smooth entry/exit (currently pops in/out)
+- The node/edge count badge and zoom controls fade in when graph loads
+- The loading spinner and empty state crossfade with `AnimatePresence mode="wait"`
 
-### 6. Transaction Details -- Card-Based Layout with Sparklines
-**File: `src/components/TransactionDetails.tsx`**
+### 11. Status Bar copy pill (`src/components/StatusBar.tsx`)
+The "Copied!" pill uses `<motion.span>` with spring scale + opacity entry, and a smooth fade-out exit via `AnimatePresence`.
 
-Replace the flat info grid with mini-cards for each metric:
-- Each metric (Status, Confirmations, Value, Time) gets its own rounded card with an icon, label, and value
-- Cards are arranged in a 2x2 grid
-- The Value card shows a tiny inline sparkline-style bar indicating the value relative to total inputs
-- Confirmation card background subtly tints green/yellow/red based on status
+### 12. Header demo badge (`src/components/Header.tsx`)
+The "DEMO" badge uses `<AnimatePresence>` + `<motion.div layoutId="demo-badge">` so it smoothly appears/disappears when toggling demo mode.
 
-### 7. Floating Action Button (FAB) for Quick Actions on Mobile
-**File: `src/components/FloatingActions.tsx` (new), `src/pages/Index.tsx`**
-
-On mobile, add a floating action button (bottom-right) that expands into a radial menu with: Import, Export, Toggle Demo, Fit Graph. Uses scale-in animation with staggered delays for each sub-button. Desktop hides this since actions are in the header.
-
-### 8. Skeleton Shimmer Animations
-**File: `src/index.css`, `tailwind.config.ts`**
-
-Upgrade the shimmer utility to actually animate (currently static). Add the `animate-shimmer` class that moves the gradient across loading skeletons. Apply to all skeleton instances in TransactionDetails and any loading state.
-
-### 9. Tooltip Previews on Graph Nodes
-**File: `src/components/TransactionGraph.tsx`**
-
-When hovering over a graph node, show a floating tooltip (HTML overlay positioned near the cursor) with:
-- Truncated TXID
-- BTC value
-- Label (if any)
-- "Click to inspect" hint
-
-This uses Cytoscape's `mouseover` event and a small absolutely-positioned React div, not Cytoscape's native tooltips (which are ugly).
-
-### 10. Panel Headers with Collapse/Expand Icons
-**File: `src/components/TransactionDetails.tsx`, `src/components/LabelEditor.tsx`, `src/pages/Index.tsx`**
-
-Add proper panel header bars at the top of each resizable panel with:
-- Title + icon (already partially there)
-- A collapse button that minimizes the panel to just the header bar
-- A subtle bottom border separator
-
-### 11. Edge Label Badges
-**File: `src/components/TransactionGraph.tsx`**
-
-Style edge labels as pill-shaped badges with a dark background and Bitcoin orange text, rather than plain floating text. This uses Cytoscape's `text-background-color`, `text-background-opacity`, `text-background-padding`, and `text-background-shape: roundrectangle` styles.
-
-### 12. Onboarding Spotlight / First-Run Experience
-**File: `src/components/OnboardingOverlay.tsx` (new), `src/pages/Index.tsx`**
-
-On first visit (checked via localStorage flag), show a translucent overlay with 3 numbered callout bubbles pointing at:
-1. The search bar -- "Search any Bitcoin transaction"
-2. The Demo toggle -- "Or explore with sample data"
-3. The graph area -- "Visualize transaction ancestry"
-
-A "Got it" button dismisses and sets the localStorage flag. Subtle fade + scale entrance animation.
-
-### 13. Enhanced Empty States with Particle Background
-**File: `src/components/TransactionGraph.tsx`, `src/index.css`**
-
-Add a CSS-only floating particle effect to the empty graph state -- small dots that slowly drift upward using CSS keyframe animations. This creates movement and life in the otherwise static empty state, making users want to interact. Implemented with 6-8 absolutely positioned small circles with varying animation durations and delays.
-
-### 14. Copy Feedback Upgrade
-**File: `src/components/TransactionDetails.tsx`, `src/components/StatusBar.tsx`**
-
-Replace the simple icon swap with a small animated toast that appears inline near the copy button -- a tiny green "Copied!" pill that slides in and fades out after 1.5s. More satisfying than just swapping an icon.
-
-### 15. Keyboard Shortcut Cheat Sheet
-**File: `src/components/KeyboardShortcuts.tsx` (new), `src/pages/Index.tsx`**
-
-Press `?` to open a small modal showing all keyboard shortcuts in a clean two-column table:
-- Cmd+K: Command palette
-- Escape: Deselect node
-- ?: Show shortcuts
-
-This is a hallmark of professional desktop applications.
-
----
+### 13. Graph Legend (`src/components/GraphLegend.tsx`)
+Animate the legend card entrance with a slide-in from the left + fade when the graph first loads.
 
 ## Technical Details
 
-**New files created (6):**
-- `src/components/CommandPalette.tsx` -- Command palette using cmdk
-- `src/components/GraphBreadcrumb.tsx` -- Transaction navigation breadcrumb
-- `src/components/FloatingActions.tsx` -- Mobile FAB menu
-- `src/components/OnboardingOverlay.tsx` -- First-run spotlight
-- `src/components/KeyboardShortcuts.tsx` -- Shortcut cheat sheet modal
-- `src/hooks/use-animated-number.ts` -- Number counter animation hook
+**New dependency:** `framer-motion` (latest)
 
-**Files modified (8):**
-- `src/pages/Index.tsx` -- Integrate command palette, breadcrumb, FAB, onboarding, shortcut modal, breadcrumb state tracking
-- `src/components/Header.tsx` -- Animated gradient border, logo glow, Cmd+K opens palette instead of focusing input
-- `src/components/TransactionGraph.tsx` -- Node glow shadows, edge label badges, hover tooltip overlay, ripple animation, particle empty state, larger nodes
-- `src/components/TransactionDetails.tsx` -- 2x2 metric cards, animated numbers, inline copy feedback
-- `src/components/LabelEditor.tsx` -- Panel header collapse button
-- `src/components/StatusBar.tsx` -- Animated number counters
-- `src/index.css` -- Animated gradient border keyframes, shimmer animation, floating particle keyframes, glow utilities
-- `tailwind.config.ts` -- New keyframes: gradient-sweep, float-up, inline-toast
+**New file:** `src/lib/motion.ts` -- shared variants and transitions
 
-**No new dependencies** -- uses existing `cmdk`, `react-resizable-panels`, shadcn components, Cytoscape built-in styles, and CSS animations.
+**Modified files (12):**
+- `src/pages/Index.tsx` -- motion.div wrapper, AnimatePresence for panels
+- `src/components/ConnectionBanner.tsx` -- motion.div with slideDown/exit
+- `src/components/GraphBreadcrumb.tsx` -- motion.button with layoutId, AnimatePresence
+- `src/components/TransactionDetails.tsx` -- AnimatePresence keyed swap, staggered cards
+- `src/components/LabelEditor.tsx` -- AnimatePresence for label list, motion layout
+- `src/components/FloatingActions.tsx` -- spring-based FAB expansion
+- `src/components/OnboardingOverlay.tsx` -- staggered steps, exit animation
+- `src/components/TransactionGraph.tsx` -- tooltip AnimatePresence, overlay fade-ins
+- `src/components/StatusBar.tsx` -- copy pill AnimatePresence
+- `src/components/Header.tsx` -- demo badge AnimatePresence
+- `src/components/GraphLegend.tsx` -- slide-in entrance
 
-**Scope**: Purely visual/UX. No changes to data flow, API layer, types, or demo mode logic. All existing functionality remains intact.
-
+**Scope:** Animation-only changes. No data flow, API, or business logic modifications. All existing CSS animations remain as fallbacks; framer-motion layers on top for the interactive/transition cases where CSS alone falls short (mount/unmount, layout shifts, spring physics, gesture-driven).
