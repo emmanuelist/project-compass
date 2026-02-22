@@ -1,7 +1,15 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
-export function ConnectionBanner() {
+interface ConnectionBannerProps {
+  onDemoActivate?: () => void;
+}
+
+export function ConnectionBanner({ onDemoActivate }: ConnectionBannerProps) {
+  const [dismissed, setDismissed] = useState(false);
+
   const { isError } = useQuery({
     queryKey: ["health"],
     queryFn: async () => {
@@ -14,12 +22,27 @@ export function ConnectionBanner() {
     refetchInterval: 15000,
   });
 
-  if (!isError) return null;
+  if (!isError || dismissed) return null;
 
   return (
-    <div className="flex items-center justify-center gap-2 bg-destructive/20 text-destructive px-4 py-2 text-sm animate-slide-down">
-      <AlertTriangle className="h-4 w-4" />
-      Backend API unreachable. Ensure your server is running on localhost:8000.
+    <div className="flex items-center justify-center gap-2 bg-destructive/10 text-destructive px-4 py-2 text-sm animate-slide-down relative">
+      <AlertTriangle className="h-4 w-4 shrink-0" />
+      <span>
+        Backend API unreachable.{" "}
+        {onDemoActivate && (
+          <button onClick={onDemoActivate} className="underline font-medium hover:text-destructive/80 transition-colors">
+            Try Demo Mode
+          </button>
+        )}
+      </span>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-5 w-5 absolute right-2 text-destructive hover:text-destructive/80"
+        onClick={() => setDismissed(true)}
+      >
+        <X className="h-3 w-3" />
+      </Button>
     </div>
   );
 }

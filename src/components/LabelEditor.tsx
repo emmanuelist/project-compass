@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Trash2, Save } from "lucide-react";
+import { Pencil, Trash2, Save, Tag, Plus } from "lucide-react";
 import { fetchLabelsByRef, createLabel, updateLabel, deleteLabel } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,7 +29,6 @@ export function LabelEditor({ selectedTxid }: LabelEditorProps) {
   const [ref, setRef] = useState("");
   const [labelText, setLabelText] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
-  // Force re-render for demo label changes
   const [demoTick, setDemoTick] = useState(0);
 
   useEffect(() => {
@@ -112,42 +111,64 @@ export function LabelEditor({ selectedTxid }: LabelEditorProps) {
 
   if (!selectedTxid) {
     return (
-      <div className="flex items-center justify-center h-full p-4 animate-fade-in">
+      <div className="flex flex-col items-center justify-center h-full p-4 animate-fade-in gap-3">
+        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+          <Tag className="h-5 w-5 text-muted-foreground" />
+        </div>
         <p className="text-muted-foreground text-sm">Select a node to manage labels.</p>
       </div>
     );
   }
 
   return (
-    <div key={`${selectedTxid}-${demoTick}`} className="p-4 space-y-3 overflow-y-auto text-sm animate-fade-in">
-      <h3 className="font-semibold text-foreground hidden md:block">Label Editor</h3>
+    <div key={`${selectedTxid}-${demoTick}`} className="p-4 space-y-4 overflow-y-auto text-sm animate-fade-in h-full">
+      {/* Section header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Tag className="h-4 w-4 text-muted-foreground" />
+          <h3 className="font-semibold text-foreground text-sm">
+            Labels{labels.length > 0 && ` (${labels.length})`}
+          </h3>
+        </div>
+      </div>
 
-      <div className="space-y-2">
-        <Select value={labelType} onValueChange={(v) => setLabelType(v as LabelType)}>
-          <SelectTrigger className="h-8 text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="tx">tx</SelectItem>
-            <SelectItem value="addr">addr</SelectItem>
-            <SelectItem value="input">input</SelectItem>
-            <SelectItem value="output">output</SelectItem>
-          </SelectContent>
-        </Select>
+      {/* Form */}
+      <div className={`space-y-3 rounded-lg border p-3 transition-colors ${editingId ? "border-primary/40 bg-primary/5" : "border-border"}`}>
+        <div className="space-y-1">
+          <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Type</label>
+          <Select value={labelType} onValueChange={(v) => setLabelType(v as LabelType)}>
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="tx">tx</SelectItem>
+              <SelectItem value="addr">addr</SelectItem>
+              <SelectItem value="input">input</SelectItem>
+              <SelectItem value="output">output</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-        <Input
-          className="h-8 font-mono text-xs"
-          placeholder="Reference"
-          value={ref}
-          onChange={(e) => setRef(e.target.value)}
-        />
+        <div className="space-y-1">
+          <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Reference</label>
+          <Input
+            className="h-8 font-mono text-xs"
+            placeholder="Transaction ID or address"
+            value={ref}
+            onChange={(e) => setRef(e.target.value)}
+          />
+          <p className="text-[10px] text-muted-foreground">The txid, address, or input/output ref</p>
+        </div>
 
-        <Input
-          className="h-8 text-xs"
-          placeholder="Label text"
-          value={labelText}
-          onChange={(e) => setLabelText(e.target.value)}
-        />
+        <div className="space-y-1">
+          <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Label</label>
+          <Input
+            className="h-8 text-xs"
+            placeholder="e.g. Exchange deposit, Mining reward"
+            value={labelText}
+            onChange={(e) => setLabelText(e.target.value)}
+          />
+        </div>
 
         <Button
           size="sm"
@@ -155,21 +176,28 @@ export function LabelEditor({ selectedTxid }: LabelEditorProps) {
           disabled={!labelText.trim() || (!isDemoMode && saveMutation.isPending)}
           onClick={handleSave}
         >
-          <Save className="h-3 w-3 mr-1" />
-          {editingId ? "Update" : "Save"} Label
+          {editingId ? <Save className="h-3 w-3 mr-1.5" /> : <Plus className="h-3 w-3 mr-1.5" />}
+          {editingId ? "Update Label" : "Add Label"}
         </Button>
       </div>
 
-      {labels.length > 0 && (
-        <div className="space-y-1 pt-2 border-t border-border">
-          <span className="text-muted-foreground text-xs">Existing Labels</span>
+      {/* Existing labels */}
+      {labels.length > 0 ? (
+        <div className="space-y-2">
+          <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Existing</span>
           {labels.map((l) => (
-            <div key={l.id || l.ref} className="flex items-center justify-between gap-2 py-1">
-              <div className="min-w-0">
-                <span className="text-xs text-accent font-mono">[{l.type}]</span>{" "}
-                <span className="text-xs text-foreground truncate">{l.label}</span>
+            <div
+              key={l.id || l.ref}
+              className="group flex items-center justify-between gap-2 p-2.5 rounded-md border border-border bg-card hover:border-muted-foreground/30 transition-colors"
+            >
+              <div className="min-w-0 flex items-center gap-2">
+                <Tag className="h-3 w-3 text-accent shrink-0" />
+                <div className="min-w-0">
+                  <span className="text-[10px] text-accent font-mono">[{l.type}]</span>{" "}
+                  <span className="text-xs text-foreground">{l.label}</span>
+                </div>
               </div>
-              <div className="flex gap-1 shrink-0">
+              <div className="flex gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                 <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => startEdit(l)}>
                   <Pencil className="h-3 w-3" />
                 </Button>
@@ -198,6 +226,8 @@ export function LabelEditor({ selectedTxid }: LabelEditorProps) {
             </div>
           ))}
         </div>
+      ) : (
+        <p className="text-xs text-muted-foreground text-center py-3">No labels yet. Add one above.</p>
       )}
     </div>
   );
