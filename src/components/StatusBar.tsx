@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAnimatedNumber } from "@/hooks/use-animated-number";
 import type { CytoscapeGraph } from "@/types";
 
 interface StatusBarProps {
@@ -11,6 +13,7 @@ interface StatusBarProps {
 
 export function StatusBar({ selectedTxid, graphData, isDemoMode }: StatusBarProps) {
   const { toast } = useToast();
+  const [showCopyPill, setShowCopyPill] = useState(false);
 
   const { isError: isDisconnected } = useQuery({
     queryKey: ["health"],
@@ -30,12 +33,15 @@ export function StatusBar({ selectedTxid, graphData, isDemoMode }: StatusBarProp
   const copyTxid = () => {
     if (selectedTxid) {
       navigator.clipboard.writeText(selectedTxid);
-      toast({ title: "Copied", description: "TXID copied to clipboard." });
+      setShowCopyPill(true);
+      setTimeout(() => setShowCopyPill(false), 1500);
     }
   };
 
   const nodeCount = graphData?.nodes.length ?? 0;
   const edgeCount = graphData?.edges.length ?? 0;
+  const animNodes = useAnimatedNumber(nodeCount);
+  const animEdges = useAnimatedNumber(edgeCount);
 
   return (
     <footer className="h-7 flex items-center justify-between px-3 border-t border-border bg-card/50 text-[11px] font-mono text-muted-foreground shrink-0 select-none">
@@ -50,19 +56,26 @@ export function StatusBar({ selectedTxid, graphData, isDemoMode }: StatusBarProp
           <span className="text-primary font-semibold">DEMO</span>
         )}
         {graphData && (
-          <span>{nodeCount} nodes · {edgeCount} edges</span>
+          <span>{animNodes} nodes · {animEdges} edges</span>
         )}
       </div>
 
       <div className="flex items-center gap-2">
         {selectedTxid && (
-          <button
-            onClick={copyTxid}
-            className="flex items-center gap-1 hover:text-foreground transition-colors"
-          >
-            <span>{truncate(selectedTxid)}</span>
-            <Copy className="h-2.5 w-2.5" />
-          </button>
+          <div className="relative">
+            {showCopyPill && (
+              <span className="absolute -top-5 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-[hsl(var(--success))] text-background text-[9px] font-medium copy-pill whitespace-nowrap">
+                Copied!
+              </span>
+            )}
+            <button
+              onClick={copyTxid}
+              className="flex items-center gap-1 hover:text-foreground transition-colors"
+            >
+              <span>{truncate(selectedTxid)}</span>
+              <Copy className="h-2.5 w-2.5" />
+            </button>
+          </div>
         )}
       </div>
     </footer>

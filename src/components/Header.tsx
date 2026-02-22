@@ -1,4 +1,4 @@
-import { useState, forwardRef } from "react";
+import { useState } from "react";
 import { Search, Upload, Download, Bitcoin, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,11 +16,12 @@ interface HeaderProps {
   isDemoMode?: boolean;
   onDemoToggle?: () => void;
   searchInputRef?: React.RefObject<HTMLInputElement>;
+  onCommandPalette?: () => void;
 }
 
 const TXID_REGEX = /^[a-fA-F0-9]{64}$/;
 
-export function Header({ onSearch, onImportClick, onExportClick, isSearching, isDemoMode, onDemoToggle, searchInputRef }: HeaderProps) {
+export function Header({ onSearch, onImportClick, onExportClick, isSearching, isDemoMode, onDemoToggle, searchInputRef, onCommandPalette }: HeaderProps) {
   const [txidInput, setTxidInput] = useState(() =>
     localStorage.getItem("kych_last_txid") || ""
   );
@@ -45,7 +46,7 @@ export function Header({ onSearch, onImportClick, onExportClick, isSearching, is
       <header className="flex flex-wrap items-center gap-3 gradient-border-bottom bg-card px-4 py-2.5">
         {/* Brand */}
         <div className="flex items-center gap-2 shrink-0">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10">
+          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 logo-glow">
             <Bitcoin className="h-5 w-5 text-primary" />
           </div>
           <span className="text-lg font-bold tracking-tight text-foreground hidden sm:inline">
@@ -110,9 +111,12 @@ export function Header({ onSearch, onImportClick, onExportClick, isSearching, is
               value={txidInput}
               onChange={(e) => setTxidInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              onClick={onCommandPalette}
               maxLength={64}
             />
-            <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground bg-muted rounded border border-border">
+            <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground bg-muted rounded border border-border cursor-pointer hover:bg-muted/80 transition-colors"
+              onClick={onCommandPalette}
+            >
               ⌘K
             </kbd>
           </div>
