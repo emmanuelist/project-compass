@@ -52,8 +52,8 @@ export function Header({ onSearch, onImportClick, onExportClick, isSearching }: 
           maxLength={64}
         />
         <Button onClick={handleSearch} disabled={isSearching} size="sm">
-          <Search className="h-4 w-4" />
-          <span className="hidden sm:inline">Search</span>
+          {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+          <span className="hidden sm:inline">{isSearching ? "Searching" : "Search"}</span>
         </Button>
       </div>
 
