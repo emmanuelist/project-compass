@@ -1,3 +1,6 @@
+import { motion } from "framer-motion";
+import { slideInLeft } from "@/lib/motion";
+
 export function GraphLegend() {
   const items = [
     { color: "bg-accent", label: "Regular" },
@@ -7,7 +10,12 @@ export function GraphLegend() {
   ];
 
   return (
-    <div className="absolute top-3 left-3 glass rounded-lg px-3 py-2 space-y-1.5 z-10">
+    <motion.div
+      variants={slideInLeft}
+      initial="initial"
+      animate="animate"
+      className="absolute top-3 left-3 glass rounded-lg px-3 py-2 space-y-1.5 z-10"
+    >
       <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Legend</span>
       {items.map((item) => (
         <div key={item.label} className="flex items-center gap-2">
@@ -15,6 +23,6 @@ export function GraphLegend() {
           <span className="text-[11px] text-foreground">{item.label}</span>
         </div>
       ))}
-    </div>
+    </motion.div>
   );
 }
