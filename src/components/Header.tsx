@@ -44,7 +44,7 @@ export function Header({ onSearch, onImportClick, onExportClick, isSearching }: 
 
       <div className="flex flex-1 items-center gap-2 max-w-2xl">
         <Input
-          className="font-mono text-sm"
+          className={`font-mono text-sm transition-shadow duration-300 ${isSearching ? "ring-2 ring-primary/40" : ""}`}
           placeholder="Enter transaction ID (64-char hex)"
           value={txidInput}
           onChange={(e) => setTxidInput(e.target.value)}

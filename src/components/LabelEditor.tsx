@@ -74,14 +74,14 @@ export function LabelEditor({ selectedTxid }: LabelEditorProps) {
 
   if (!selectedTxid) {
     return (
-      <div className="flex items-center justify-center h-full p-4">
+      <div className="flex items-center justify-center h-full p-4 animate-fade-in">
         <p className="text-muted-foreground text-sm">Select a node to manage labels.</p>
       </div>
     );
   }
 
   return (
-    <div className="p-4 space-y-3 overflow-y-auto text-sm">
+    <div key={selectedTxid} className="p-4 space-y-3 overflow-y-auto text-sm animate-fade-in">
       <h3 className="font-semibold text-foreground">Label Editor</h3>
 
       <div className="space-y-2">

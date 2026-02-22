@@ -133,7 +133,7 @@ export function TransactionGraph({ graphData, isLoading, onNodeSelect }: Transac
   ];
 
   return (
-    <div className="flex-1 relative bg-background">
+    <div className={`flex-1 relative bg-background transition-opacity duration-500 ${isReady ? "opacity-100" : "opacity-0"}`}>
       <CytoscapeComponent
         elements={elements}
         stylesheet={STYLESHEET}
