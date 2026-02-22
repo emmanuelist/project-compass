@@ -1,33 +1,28 @@
 
-
-# Mobile Responsiveness — Stacking Panels on Small Screens
+# Collapsible Panels on Mobile
 
 ## Overview
-Make the app fully usable on mobile by stacking the bottom panels vertically and adjusting the header layout for narrow screens.
+On mobile, wrap the Transaction Details and Label Editor panels in accordion-style collapsible sections so users can expand/collapse each independently. On desktop, panels remain side-by-side as they are now.
 
 ## Changes
 
-### 1. Index.tsx — Bottom Panels Stack Vertically
-The bottom panels currently sit side-by-side (`flex` row). On mobile they should stack:
-- Change the bottom panels container from `flex` (row) to `flex flex-col md:flex-row`
-- Remove the right border on the Details panel on mobile (only apply `md:border-r`)
-- Add a top border between stacked panels on mobile
-- Give each panel a minimum height on mobile so they are usable (`min-h-[200px] md:min-h-0`)
-- On mobile, give the graph area a fixed minimum height instead of flex-based sizing (`min-h-[250px]`)
+### Index.tsx
+- Import `useIsMobile` hook and the `Collapsible`, `CollapsibleTrigger`, `CollapsibleContent` components (already in the project)
+- On mobile (`useIsMobile()`), wrap each panel in a `Collapsible` with:
+  - A trigger bar showing the section title ("Transaction Details" / "Label Editor") with a chevron icon
+  - Content that collapses/expands with animation
+  - "Transaction Details" defaults to open, "Label Editor" defaults to collapsed
+  - Remove the fixed `min-h-[200px]` on mobile since collapsed panels should take minimal space
+- On desktop, render panels exactly as they are now (no collapsible wrapper)
 
-### 2. Index.tsx — Overall Layout on Mobile
-- Switch from flex-ratio layout to a scrollable column on mobile: wrap the main content area in `md:flex-1 md:flex md:flex-col md:min-h-0` while on mobile allow natural scrolling (`overflow-y-auto md:overflow-hidden`)
-- Graph gets a fixed height on mobile (`h-[50vh] md:flex-[3]`), panels get auto height
-
-### 3. Header.tsx — Better Mobile Layout
-The header already hides text labels on small screens. Minor improvements:
-- Wrap the header to allow the search bar to go full-width on very small screens: `flex flex-wrap` with the search section getting `w-full sm:w-auto sm:flex-1 order-last sm:order-none mt-2 sm:mt-0`
-- This puts the search input below the logo and buttons on very narrow screens
+### TransactionDetails.tsx + LabelEditor.tsx
+- No changes needed -- the `h3` title inside each component stays as-is; the collapsible trigger in Index.tsx will have its own label so there's no duplication issue. Alternatively, we can hide the internal `h3` on mobile to avoid showing the title twice. We'll hide it on mobile with `hidden md:block`.
 
 ## Technical Details
 
 **Files modified:**
-- `src/pages/Index.tsx` — Responsive flex direction, mobile scroll, graph fixed height
-- `src/components/Header.tsx` — Wrap on mobile for search bar
+- `src/pages/Index.tsx` -- Add mobile collapsible wrappers around each panel
+- `src/components/TransactionDetails.tsx` -- Hide `h3` on mobile (`hidden md:block`)
+- `src/components/LabelEditor.tsx` -- Hide `h3` on mobile (`hidden md:block`)
 
-No new dependencies needed. All changes use existing Tailwind responsive prefixes (`sm:`, `md:`).
+**Approach:** Use the existing `Collapsible` component from Radix UI (already installed). On mobile, each panel gets a styled trigger bar with the section name and a chevron that rotates on open. The content area animates open/closed. On desktop, the collapsible wrapper is bypassed entirely, keeping the current layout unchanged.
