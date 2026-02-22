@@ -1,10 +1,9 @@
-import { useRef, useCallback, useEffect } from "react";
+import { useRef, useCallback, useEffect, useState } from "react";
 import CytoscapeComponent from "react-cytoscapejs";
 import cytoscape from "cytoscape";
 import dagre from "cytoscape-dagre";
-import { ZoomIn, ZoomOut, Maximize } from "lucide-react";
+import { ZoomIn, ZoomOut, Maximize, Bitcoin } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import type { CytoscapeGraph } from "@/types";
 
 dagre(cytoscape);
@@ -87,18 +86,33 @@ export function TransactionGraph({ graphData, isLoading, onNodeSelect }: Transac
     [onNodeSelect]
   );
 
+  const [isReady, setIsReady] = useState(false);
+
   useEffect(() => {
-    // Re-run layout when data changes
     if (cyRef.current && graphData) {
       cyRef.current.layout(LAYOUT as any).run();
       cyRef.current.fit(undefined, 40);
     }
   }, [graphData]);
 
+  useEffect(() => {
+    if (graphData && !isLoading) {
+      requestAnimationFrame(() => setIsReady(true));
+    } else {
+      setIsReady(false);
+    }
+  }, [graphData, isLoading]);
+
   if (isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-background">
-        <Skeleton className="w-3/4 h-3/4 rounded-lg" />
+      <div className="flex-1 flex items-center justify-center bg-background animate-fade-in">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <div className="absolute inset-0 rounded-full border-2 border-primary/30 animate-pulse-glow" />
+            <Bitcoin className="h-10 w-10 text-primary animate-spin-slow" />
+          </div>
+          <p className="text-muted-foreground text-sm animate-fade-in">Loading graph…</p>
+        </div>
       </div>
     );
   }
@@ -119,7 +133,7 @@ export function TransactionGraph({ graphData, isLoading, onNodeSelect }: Transac
   ];
 
   return (
-    <div className="flex-1 relative bg-background">
+    <div className={`flex-1 relative bg-background transition-opacity duration-500 ${isReady ? "opacity-100" : "opacity-0"}`}>
       <CytoscapeComponent
         elements={elements}
         stylesheet={STYLESHEET}

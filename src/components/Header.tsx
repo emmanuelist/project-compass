@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, Upload, Download, Bitcoin } from "lucide-react";
+import { Search, Upload, Download, Bitcoin, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -44,7 +44,7 @@ export function Header({ onSearch, onImportClick, onExportClick, isSearching }: 
 
       <div className="flex flex-1 items-center gap-2 max-w-2xl">
         <Input
-          className="font-mono text-sm"
+          className={`font-mono text-sm transition-shadow duration-300 ${isSearching ? "ring-2 ring-primary/40" : ""}`}
           placeholder="Enter transaction ID (64-char hex)"
           value={txidInput}
           onChange={(e) => setTxidInput(e.target.value)}
@@ -52,8 +52,8 @@ export function Header({ onSearch, onImportClick, onExportClick, isSearching }: 
           maxLength={64}
         />
         <Button onClick={handleSearch} disabled={isSearching} size="sm">
-          <Search className="h-4 w-4" />
-          <span className="hidden sm:inline">Search</span>
+          {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+          <span className="hidden sm:inline">{isSearching ? "Searching" : "Search"}</span>
         </Button>
       </div>
 

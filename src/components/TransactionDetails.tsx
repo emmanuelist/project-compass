@@ -33,7 +33,7 @@ export function TransactionDetails({ selectedTxid }: TransactionDetailsProps) {
 
   if (!selectedTxid) {
     return (
-      <div className="flex items-center justify-center h-full p-4">
+      <div className="flex items-center justify-center h-full p-4 animate-fade-in">
         <p className="text-muted-foreground text-sm">Select a node to view details.</p>
       </div>
     );
@@ -41,11 +41,10 @@ export function TransactionDetails({ selectedTxid }: TransactionDetailsProps) {
 
   if (isLoading) {
     return (
-      <div className="p-4 space-y-3">
-        <Skeleton className="h-4 w-48" />
-        <Skeleton className="h-4 w-32" />
-        <Skeleton className="h-4 w-40" />
-        <Skeleton className="h-4 w-36" />
+      <div className="p-4 space-y-3 animate-fade-in">
+        {[48, 32, 40, 36].map((w, i) => (
+          <Skeleton key={i} className={`h-4 shimmer-bg animate-shimmer`} style={{ width: `${w * 4}px`, animationDelay: `${i * 100}ms` }} />
+        ))}
       </div>
     );
   }
@@ -53,7 +52,7 @@ export function TransactionDetails({ selectedTxid }: TransactionDetailsProps) {
   if (!tx) return null;
 
   return (
-    <div className="p-4 space-y-3 overflow-y-auto text-sm">
+    <div key={selectedTxid} className="p-4 space-y-3 overflow-y-auto text-sm animate-fade-in">
       <h3 className="font-semibold text-foreground">Transaction Details</h3>
 
       <div className="flex items-center gap-2">

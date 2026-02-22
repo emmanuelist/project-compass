@@ -17,7 +17,7 @@ export function ConnectionBanner() {
   if (!isError) return null;
 
   return (
-    <div className="flex items-center justify-center gap-2 bg-destructive/20 text-destructive px-4 py-2 text-sm">
+    <div className="flex items-center justify-center gap-2 bg-destructive/20 text-destructive px-4 py-2 text-sm animate-slide-down">
       <AlertTriangle className="h-4 w-4" />
       Backend API unreachable. Ensure your server is running on localhost:8000.
     </div>
