@@ -1,7 +1,7 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown } from "lucide-react";
-import { fetchGraph } from "@/lib/api";
+import { fetchGraph, ApiError } from "@/lib/api";
 import { Header } from "@/components/Header";
 import { TransactionGraph } from "@/components/TransactionGraph";
 import { TransactionDetails } from "@/components/TransactionDetails";
@@ -28,13 +28,30 @@ const Index = () => {
   const {
     data: graphData,
     isLoading: graphLoading,
-    isError: graphError,
+    error: graphError,
   } = useQuery({
     queryKey: ["graph", searchTxid],
     queryFn: () => fetchGraph(searchTxid!, 3),
     enabled: !!searchTxid,
     retry: 1,
   });
+
+  useEffect(() => {
+    if (!graphError) return;
+    if (graphError instanceof ApiError && graphError.status === 404) {
+      toast({
+        variant: "destructive",
+        title: "Transaction Not Found",
+        description: "No transaction exists with that ID. Please check and try again.",
+      });
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to fetch transaction. Please try again later.",
+      });
+    }
+  }, [graphError, toast]);
 
   const handleSearch = useCallback(
     (txid: string) => {
@@ -47,11 +64,6 @@ const Index = () => {
   const handleNodeSelect = useCallback((txid: string) => {
     setSelectedTxid(txid);
   }, []);
-
-  // Show error toast when graph fetch fails
-  if (graphError && searchTxid) {
-    // handled via React Query error state
-  }
 
   return (
     <div className="flex flex-col h-screen bg-background">
