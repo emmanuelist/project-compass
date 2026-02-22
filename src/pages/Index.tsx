@@ -12,9 +12,11 @@ import { ConnectionBanner } from "@/components/ConnectionBanner";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
+import { DemoModeProvider, useDemoMode } from "@/hooks/use-demo-mode";
 
-const Index = () => {
+function IndexContent() {
   const { toast } = useToast();
+  const { isDemoMode, toggleDemoMode, demoGraphData, defaultDemoTxid } = useDemoMode();
   const [searchTxid, setSearchTxid] = useState<string | null>(
     () => localStorage.getItem("kych_last_txid") || null
   );
@@ -32,7 +34,7 @@ const Index = () => {
   } = useQuery({
     queryKey: ["graph", searchTxid],
     queryFn: () => fetchGraph(searchTxid!, 3),
-    enabled: !!searchTxid,
+    enabled: !!searchTxid && !isDemoMode,
     retry: 1,
   });
 
@@ -53,6 +55,14 @@ const Index = () => {
     }
   }, [graphError, toast]);
 
+  // Auto-select demo data when demo mode is activated
+  useEffect(() => {
+    if (isDemoMode) {
+      setSearchTxid(defaultDemoTxid);
+      setSelectedTxid(defaultDemoTxid);
+    }
+  }, [isDemoMode, defaultDemoTxid]);
+
   const handleSearch = useCallback(
     (txid: string) => {
       setSearchTxid(txid);
@@ -65,27 +75,30 @@ const Index = () => {
     setSelectedTxid(txid);
   }, []);
 
+  const activeGraphData = isDemoMode ? demoGraphData : graphData;
+  const activeLoading = isDemoMode ? false : graphLoading;
+
   return (
     <div className="flex flex-col h-screen bg-background">
-      <ConnectionBanner />
+      {!isDemoMode && <ConnectionBanner />}
       <Header
         onSearch={handleSearch}
         onImportClick={() => setImportOpen(true)}
         onExportClick={() => setExportOpen(true)}
-        isSearching={graphLoading}
+        isSearching={activeLoading}
+        isDemoMode={isDemoMode}
+        onDemoToggle={toggleDemoMode}
       />
 
       <div className="overflow-y-auto md:overflow-hidden md:flex-1 md:flex md:flex-col md:min-h-0">
-        {/* Graph area */}
         <div className="h-[50vh] md:h-auto md:flex-[3] min-h-[250px] md:min-h-0 flex">
           <TransactionGraph
-            graphData={graphData}
-            isLoading={graphLoading}
+            graphData={activeGraphData}
+            isLoading={activeLoading}
             onNodeSelect={handleNodeSelect}
           />
         </div>
 
-        {/* Bottom panels */}
         <div className="flex flex-col md:flex-row md:flex-[2] md:min-h-0 border-t border-border">
           {isMobile ? (
             <>
@@ -125,6 +138,12 @@ const Index = () => {
       <ExportModal open={exportOpen} onOpenChange={setExportOpen} />
     </div>
   );
-};
+}
+
+const Index = () => (
+  <DemoModeProvider>
+    <IndexContent />
+  </DemoModeProvider>
+);
 
 export default Index;

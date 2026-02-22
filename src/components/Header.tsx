@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Search, Upload, Download, Bitcoin, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 
 interface HeaderProps {
@@ -9,11 +10,13 @@ interface HeaderProps {
   onImportClick: () => void;
   onExportClick: () => void;
   isSearching?: boolean;
+  isDemoMode?: boolean;
+  onDemoToggle?: () => void;
 }
 
 const TXID_REGEX = /^[a-fA-F0-9]{64}$/;
 
-export function Header({ onSearch, onImportClick, onExportClick, isSearching }: HeaderProps) {
+export function Header({ onSearch, onImportClick, onExportClick, isSearching, isDemoMode, onDemoToggle }: HeaderProps) {
   const [txidInput, setTxidInput] = useState(() =>
     localStorage.getItem("kych_last_txid") || ""
   );
@@ -51,6 +54,12 @@ export function Header({ onSearch, onImportClick, onExportClick, isSearching }: 
           <Download className="h-4 w-4" />
           <span className="hidden md:inline">Export</span>
         </Button>
+        {onDemoToggle && (
+          <div className="flex items-center gap-1.5">
+            <Switch checked={isDemoMode} onCheckedChange={onDemoToggle} />
+            <span className="text-xs text-muted-foreground">Demo</span>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-2 w-full sm:w-auto sm:flex-1 order-last sm:order-none mt-2 sm:mt-0 max-w-2xl">

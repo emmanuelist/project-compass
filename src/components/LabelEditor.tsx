@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useDemoMode } from "@/hooks/use-demo-mode";
 import type { LabelType, BIP329Label } from "@/types";
 
 interface LabelEditorProps {
@@ -16,11 +17,20 @@ interface LabelEditorProps {
 export function LabelEditor({ selectedTxid }: LabelEditorProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const {
+    isDemoMode,
+    getDemoLabels,
+    createDemoLabel,
+    updateDemoLabel,
+    deleteDemoLabel,
+  } = useDemoMode();
 
   const [labelType, setLabelType] = useState<LabelType>("tx");
   const [ref, setRef] = useState("");
   const [labelText, setLabelText] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
+  // Force re-render for demo label changes
+  const [demoTick, setDemoTick] = useState(0);
 
   useEffect(() => {
     if (selectedTxid) {
@@ -31,11 +41,13 @@ export function LabelEditor({ selectedTxid }: LabelEditorProps) {
     }
   }, [selectedTxid]);
 
-  const { data: labels = [] } = useQuery({
+  const { data: apiLabels = [] } = useQuery({
     queryKey: ["labels", ref],
     queryFn: () => fetchLabelsByRef(ref),
-    enabled: !!ref,
+    enabled: !!ref && !isDemoMode,
   });
+
+  const labels = isDemoMode ? getDemoLabels(ref) : apiLabels;
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["labels"] });
@@ -65,6 +77,32 @@ export function LabelEditor({ selectedTxid }: LabelEditorProps) {
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
+  const handleSave = () => {
+    if (isDemoMode) {
+      if (editingId) {
+        updateDemoLabel(editingId, { type: labelType, ref, label: labelText });
+      } else {
+        createDemoLabel({ type: labelType, ref, label: labelText });
+      }
+      toast({ title: "Label saved" });
+      setLabelText("");
+      setEditingId(null);
+      setDemoTick((t) => t + 1);
+      return;
+    }
+    saveMutation.mutate();
+  };
+
+  const handleDelete = (id: string) => {
+    if (isDemoMode) {
+      deleteDemoLabel(id);
+      toast({ title: "Label deleted" });
+      setDemoTick((t) => t + 1);
+      return;
+    }
+    deleteMutation.mutate(id);
+  };
+
   const startEdit = (l: BIP329Label) => {
     setEditingId(l.id || null);
     setLabelType(l.type);
@@ -81,7 +119,7 @@ export function LabelEditor({ selectedTxid }: LabelEditorProps) {
   }
 
   return (
-    <div key={selectedTxid} className="p-4 space-y-3 overflow-y-auto text-sm animate-fade-in">
+    <div key={`${selectedTxid}-${demoTick}`} className="p-4 space-y-3 overflow-y-auto text-sm animate-fade-in">
       <h3 className="font-semibold text-foreground hidden md:block">Label Editor</h3>
 
       <div className="space-y-2">
@@ -114,8 +152,8 @@ export function LabelEditor({ selectedTxid }: LabelEditorProps) {
         <Button
           size="sm"
           className="w-full"
-          disabled={!labelText.trim() || saveMutation.isPending}
-          onClick={() => saveMutation.mutate()}
+          disabled={!labelText.trim() || (!isDemoMode && saveMutation.isPending)}
+          onClick={handleSave}
         >
           <Save className="h-3 w-3 mr-1" />
           {editingId ? "Update" : "Save"} Label
@@ -150,7 +188,7 @@ export function LabelEditor({ selectedTxid }: LabelEditorProps) {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => l.id && deleteMutation.mutate(l.id)}>
+                      <AlertDialogAction onClick={() => l.id && handleDelete(l.id)}>
                         Delete
                       </AlertDialogAction>
                     </AlertDialogFooter>
