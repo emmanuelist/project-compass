@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown } from "lucide-react";
 import { fetchGraph, ApiError } from "@/lib/api";
@@ -9,6 +9,8 @@ import { LabelEditor } from "@/components/LabelEditor";
 import { ImportModal } from "@/components/ImportModal";
 import { ExportModal } from "@/components/ExportModal";
 import { ConnectionBanner } from "@/components/ConnectionBanner";
+import { StatusBar } from "@/components/StatusBar";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
@@ -26,6 +28,7 @@ function IndexContent() {
   const [detailsOpen, setDetailsOpen] = useState(true);
   const [labelsOpen, setLabelsOpen] = useState(false);
   const isMobile = useIsMobile();
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const {
     data: graphData,
@@ -63,6 +66,23 @@ function IndexContent() {
     }
   }, [isDemoMode, defaultDemoTxid]);
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + K -> focus search
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+      // Escape -> deselect node
+      if (e.key === "Escape") {
+        setSelectedTxid(null);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
   const handleSearch = useCallback(
     (txid: string) => {
       setSearchTxid(txid);
@@ -75,12 +95,16 @@ function IndexContent() {
     setSelectedTxid(txid);
   }, []);
 
+  const handleDemoActivate = useCallback(() => {
+    if (!isDemoMode) toggleDemoMode();
+  }, [isDemoMode, toggleDemoMode]);
+
   const activeGraphData = isDemoMode ? demoGraphData : graphData;
   const activeLoading = isDemoMode ? false : graphLoading;
 
   return (
     <div className="flex flex-col h-screen bg-background">
-      {!isDemoMode && <ConnectionBanner />}
+      {!isDemoMode && <ConnectionBanner onDemoActivate={handleDemoActivate} />}
       <Header
         onSearch={handleSearch}
         onImportClick={() => setImportOpen(true)}
@@ -88,51 +112,94 @@ function IndexContent() {
         isSearching={activeLoading}
         isDemoMode={isDemoMode}
         onDemoToggle={toggleDemoMode}
+        searchInputRef={searchInputRef}
       />
 
-      <div className="overflow-y-auto md:overflow-hidden md:flex-1 md:flex md:flex-col md:min-h-0">
-        <div className="h-[50vh] md:h-auto md:flex-[3] min-h-[250px] md:min-h-0 flex">
-          <TransactionGraph
-            graphData={activeGraphData}
-            isLoading={activeLoading}
-            onNodeSelect={handleNodeSelect}
-          />
-        </div>
+      {isMobile ? (
+        <div className="flex-1 overflow-y-auto">
+          <div className="h-[50vh] min-h-[250px] flex">
+            <TransactionGraph
+              graphData={activeGraphData}
+              isLoading={activeLoading}
+              onNodeSelect={handleNodeSelect}
+              onDemoActivate={!isDemoMode ? handleDemoActivate : undefined}
+            />
+          </div>
 
-        <div className="flex flex-col md:flex-row md:flex-[2] md:min-h-0 border-t border-border">
-          {isMobile ? (
-            <>
-              <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
-                <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-2 text-sm font-semibold text-foreground border-b border-border hover:bg-muted/50 transition-colors">
-                  Transaction Details
-                  <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${detailsOpen ? "rotate-180" : ""}`} />
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <TransactionDetails selectedTxid={selectedTxid} />
-                </CollapsibleContent>
-              </Collapsible>
-              <Collapsible open={labelsOpen} onOpenChange={setLabelsOpen}>
-                <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-2 text-sm font-semibold text-foreground border-b border-border hover:bg-muted/50 transition-colors">
-                  Label Editor
-                  <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${labelsOpen ? "rotate-180" : ""}`} />
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <LabelEditor selectedTxid={selectedTxid} />
-                </CollapsibleContent>
-              </Collapsible>
-            </>
-          ) : (
-            <>
-              <div className="flex-1 md:border-r border-border overflow-hidden md:min-h-0">
+          <div className="flex flex-col border-t border-border">
+            <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
+              <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-2 text-sm font-semibold text-foreground border-b border-border hover:bg-muted/50 transition-colors">
+                Transaction Details
+                <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${detailsOpen ? "rotate-180" : ""}`} />
+              </CollapsibleTrigger>
+              <CollapsibleContent>
                 <TransactionDetails selectedTxid={selectedTxid} />
-              </div>
-              <div className="flex-1 overflow-hidden border-t md:border-t-0 border-border md:min-h-0">
+              </CollapsibleContent>
+            </Collapsible>
+            <Collapsible open={labelsOpen} onOpenChange={setLabelsOpen}>
+              <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-2 text-sm font-semibold text-foreground border-b border-border hover:bg-muted/50 transition-colors">
+                Label Editor
+                <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${labelsOpen ? "rotate-180" : ""}`} />
+              </CollapsibleTrigger>
+              <CollapsibleContent>
                 <LabelEditor selectedTxid={selectedTxid} />
-              </div>
-            </>
-          )}
+              </CollapsibleContent>
+            </Collapsible>
+          </div>
         </div>
-      </div>
+      ) : (
+        <ResizablePanelGroup
+          direction="vertical"
+          className="flex-1 min-h-0"
+          onLayout={(sizes) => localStorage.setItem("kych_panel_v", JSON.stringify(sizes))}
+        >
+          <ResizablePanel
+            defaultSize={60}
+            minSize={30}
+          >
+            <div className="h-full flex">
+              <TransactionGraph
+                graphData={activeGraphData}
+                isLoading={activeLoading}
+                onNodeSelect={handleNodeSelect}
+                onDemoActivate={!isDemoMode ? handleDemoActivate : undefined}
+              />
+            </div>
+          </ResizablePanel>
+
+          <ResizableHandle withHandle />
+
+          <ResizablePanel
+            defaultSize={40}
+            minSize={20}
+          >
+            <ResizablePanelGroup
+              direction="horizontal"
+              onLayout={(sizes) => localStorage.setItem("kych_panel_h", JSON.stringify(sizes))}
+            >
+              <ResizablePanel defaultSize={50} minSize={25}>
+                <div className="h-full overflow-hidden">
+                  <TransactionDetails selectedTxid={selectedTxid} />
+                </div>
+              </ResizablePanel>
+
+              <ResizableHandle withHandle />
+
+              <ResizablePanel defaultSize={50} minSize={25}>
+                <div className="h-full overflow-hidden">
+                  <LabelEditor selectedTxid={selectedTxid} />
+                </div>
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      )}
+
+      <StatusBar
+        selectedTxid={selectedTxid}
+        graphData={activeGraphData}
+        isDemoMode={isDemoMode}
+      />
 
       <ImportModal open={importOpen} onOpenChange={setImportOpen} />
       <ExportModal open={exportOpen} onOpenChange={setExportOpen} />

@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Upload, FileText } from "lucide-react";
 import { importLabels } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import type { BIP329Label } from "@/types";
@@ -12,11 +13,18 @@ interface ImportModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export function ImportModal({ open, onOpenChange }: ImportModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<BIP329Label[]>([]);
+  const [dragOver, setDragOver] = useState(false);
 
   const handleFile = useCallback((f: File) => {
     setFile(f);
@@ -55,10 +63,16 @@ export function ImportModal({ open, onOpenChange }: ImportModalProps) {
         </DialogHeader>
 
         <div
-          className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors"
-          onDragOver={(e) => e.preventDefault()}
+          className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all duration-200 ${
+            dragOver
+              ? "border-primary bg-primary/5 scale-[1.01]"
+              : "border-border hover:border-primary/50"
+          }`}
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
           onDrop={(e) => {
             e.preventDefault();
+            setDragOver(false);
             const f = e.dataTransfer.files[0];
             if (f) handleFile(f);
           }}
@@ -72,7 +86,14 @@ export function ImportModal({ open, onOpenChange }: ImportModalProps) {
         >
           <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
           <p className="text-sm text-muted-foreground">
-            {file ? file.name : "Drop .jsonl file here or click to browse"}
+            {file ? (
+              <>
+                <span className="text-foreground font-medium">{file.name}</span>
+                <span className="text-xs ml-2">({formatFileSize(file.size)})</span>
+              </>
+            ) : (
+              "Drop .jsonl file here or click to browse"
+            )}
           </p>
         </div>
 
@@ -87,6 +108,10 @@ export function ImportModal({ open, onOpenChange }: ImportModalProps) {
               </div>
             ))}
           </div>
+        )}
+
+        {mutation.isPending && (
+          <Progress value={undefined} className="h-1.5" />
         )}
 
         <Button disabled={!file || mutation.isPending} onClick={() => mutation.mutate()} className="w-full">
