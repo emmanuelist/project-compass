@@ -1,72 +1,78 @@
 
-# Demo Mode Toggle
+
+# Expand Demo Dataset
 
 ## Overview
-Add a demo mode toggle that populates the UI with hardcoded sample Bitcoin transaction data, allowing users to explore the full interface without a running backend. When demo mode is active, all API calls are bypassed and replaced with mock data.
+Expand the current 3-transaction demo graph into a richer 8-transaction graph with branching paths, multiple addresses, and consolidation patterns to better showcase the visualization.
 
-## User Experience
-- A toggle switch in the Header bar labeled "Demo" appears next to the Import/Export buttons
-- Clicking it activates demo mode: the graph populates with sample transactions, Transaction Details shows mock data, and the Label Editor works with in-memory labels
-- The Connection Banner is hidden in demo mode
-- The search bar still works in demo mode (any valid txid will "find" the primary demo transaction)
-- Toggling demo mode off clears the demo data and returns to normal API-backed behavior
+## New Graph Structure
+
+The expanded graph adds 5 new transactions and 3 new addresses, creating branches and a consolidation:
+
+```text
+                          +-> Tx C (Alice -> Dave, Alice change) -> Tx F (Dave -> Mixer)
+                         /
+Coinbase -> Tx A (split) 
+                         \
+                          +-> Tx B (Bob -> Exchange, Bob change) -> Tx E (Bob consolidates with Carol)
+                                                                        ^
+                              Tx D (standalone: Carol funding) ----------+
+```
+
+- **Tx C**: Alice splits her funds (sends to Dave, keeps change)
+- **Tx D**: Independent transaction from Carol (second root/source)
+- **Tx E**: Bob and Carol consolidate into one output (multi-input tx)
+- **Tx F**: Dave sends to a mixer address
+- **Tx G**: Exchange internal transfer (from exchange output of Tx B)
 
 ## Changes
 
-### 1. New file: `src/lib/mock-data.ts`
-Hardcoded sample data including:
-- **3 transactions** forming a small chain (a coinbase tx funding tx A, which funds tx B)
-- **A CytoscapeGraph** with 3 nodes and 2 edges showing the flow
-- **2 sample BIP329 labels** attached to the transactions
-- All using realistic-looking (but fake) 64-char hex txids and Bitcoin values
+### `src/lib/mock-data.ts` -- Single file modified
 
-### 2. New file: `src/hooks/use-demo-mode.ts`
-A small React context/provider to manage demo mode state globally:
-- `isDemoMode` boolean state (persisted to localStorage)
-- `toggleDemoMode()` function
-- `demoGraphData`, `getDemoTransaction(txid)`, `getDemoLabels(ref)` accessors for mock data
-- In-memory label CRUD operations (create/update/delete) so the Label Editor works in demo mode
+**New txids** added to `DEMO_TXIDS`:
+- `txC`, `txD`, `txE`, `txF`, `txG`
 
-### 3. Modified: `src/pages/Index.tsx`
-- Wrap content with `DemoModeProvider`
-- When `isDemoMode` is true:
-  - Use mock graph data instead of the API query
-  - Auto-set the first demo txid as selected on activation
-  - Skip the real `useQuery` for graph (set `enabled: false`)
-- Pass `isDemoMode` and `toggleDemoMode` to the Header
+**New addresses** added to `DEMO_ADDRESSES`:
+- `dave`, `carol`, `mixer`
 
-### 4. Modified: `src/components/Header.tsx`
-- Accept `isDemoMode` and `onDemoToggle` props
-- Render a `Switch` component with a "Demo" label next to the Import/Export buttons
-- When toggled on, show a subtle indicator (the switch turns primary color)
+**New transactions** added to `DEMO_TRANSACTIONS`:
+- **Tx C**: Alice (from Tx A output 0) sends 2.0 to Dave, 1.49 change back to Alice
+- **Tx D**: Independent coinbase-like source -- Carol receives 1.5 BTC (separate funding tx with a generic input)
+- **Tx E**: Consolidation -- Bob (Tx B change, 0.23) + Carol (Tx D, 1.5) merge into 1.72 BTC to a new Bob address
+- **Tx F**: Dave (from Tx C) sends 1.8 to mixer, 0.19 change
+- **Tx G**: Exchange internal -- uses Tx B exchange output (2.5) to send 2.49 to another exchange address
 
-### 5. Modified: `src/components/ConnectionBanner.tsx`
-- Accept `isDemoMode` prop (or consume context)
-- Return `null` when demo mode is active (no need to warn about backend)
+**Updated `spent_by`** links on existing outputs:
+- Tx A output 0 (Alice, 3.5) gets `spent_by: txC`
+- Tx B output 0 (Exchange, 2.5) gets `spent_by: txG`
+- Tx B output 1 (Bob, 0.23) gets `spent_by: txE`
 
-### 6. Modified: `src/components/TransactionDetails.tsx`
-- When demo mode is active, use `getDemoTransaction(txid)` from context instead of the API query
+**New graph nodes** (5 added, total 8):
+- Tx C (blue, no label), Tx D (gray, coinbase-like), Tx E (green, has label), Tx F (blue, no label), Tx G (green, has label)
 
-### 7. Modified: `src/components/LabelEditor.tsx`
-- When demo mode is active, use in-memory label operations from the demo context instead of API mutations
+**New graph edges** (5 added, total 7):
+- Tx A -> Tx C (3.5 BTC)
+- Tx B -> Tx E (0.23 BTC)
+- Tx D -> Tx E (1.5 BTC) -- consolidation input
+- Tx C -> Tx F (2.0 BTC)
+- Tx B -> Tx G (2.5 BTC)
+
+**New labels** (3 added, total 5):
+- Tx D: "Carol's funding" 
+- Tx E: "Consolidation"
+- Tx G: "Exchange internal"
 
 ## Technical Details
 
-**Files created:**
-- `src/lib/mock-data.ts` -- Hardcoded mock transactions, graph, and labels
-- `src/hooks/use-demo-mode.tsx` -- React context provider + hook
+**Files modified:** `src/lib/mock-data.ts` only
 
-**Files modified:**
-- `src/pages/Index.tsx` -- Integrate demo mode provider and conditional data sourcing
-- `src/components/Header.tsx` -- Add demo toggle switch
-- `src/components/ConnectionBanner.tsx` -- Hide when in demo mode
-- `src/components/TransactionDetails.tsx` -- Use mock data when in demo mode
-- `src/components/LabelEditor.tsx` -- Use in-memory labels when in demo mode
+No other files need changes -- the demo mode context and all consuming components already work with any number of transactions/nodes/edges.
 
-**Mock data structure:**
-- 3 txids: one coinbase, two regular transactions forming a chain
-- Graph: 3 nodes (coinbase in gray, one labeled in green, one default in blue) with 2 edges showing BTC flow
-- Transactions: realistic fields (confirmations, timestamps, inputs/outputs with addresses and values)
-- Labels: 2 sample labels ("Mining reward" on the coinbase, "Exchange deposit" on another)
+**Graph characteristics after expansion:**
+- 8 nodes, 7 edges
+- Branching: Tx A fans out to both Tx B and Tx C
+- Consolidation: Tx E has 2 inputs from different sources
+- Multiple roots: Coinbase and Tx D are both source nodes
+- Mix of labeled (5) and unlabeled (3) nodes for visual variety
+- Realistic fee deductions on each transaction
 
-**Demo mode context approach:** Using React Context keeps the demo state accessible to all components without prop drilling, while the provider in Index.tsx keeps it scoped to the main page.
