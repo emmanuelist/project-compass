@@ -1,28 +1,41 @@
 
-# Collapsible Panels on Mobile
+
+# Add "Transaction Not Found" Toast on 404
 
 ## Overview
-On mobile, wrap the Transaction Details and Label Editor panels in accordion-style collapsible sections so users can expand/collapse each independently. On desktop, panels remain side-by-side as they are now.
+Show a specific, user-friendly toast when a transaction search returns a 404, instead of a generic error.
 
 ## Changes
 
-### Index.tsx
-- Import `useIsMobile` hook and the `Collapsible`, `CollapsibleTrigger`, `CollapsibleContent` components (already in the project)
-- On mobile (`useIsMobile()`), wrap each panel in a `Collapsible` with:
-  - A trigger bar showing the section title ("Transaction Details" / "Label Editor") with a chevron icon
-  - Content that collapses/expands with animation
-  - "Transaction Details" defaults to open, "Label Editor" defaults to collapsed
-  - Remove the fixed `min-h-[200px]` on mobile since collapsed panels should take minimal space
-- On desktop, render panels exactly as they are now (no collapsible wrapper)
+### 1. `src/lib/api.ts` — Export a custom error class with status code
+- Create a simple `ApiError` class that extends `Error` and includes the HTTP `status` code
+- Throw `ApiError` instead of plain `Error` in the `request` function so callers can distinguish 404 from other errors
 
-### TransactionDetails.tsx + LabelEditor.tsx
-- No changes needed -- the `h3` title inside each component stays as-is; the collapsible trigger in Index.tsx will have its own label so there's no duplication issue. Alternatively, we can hide the internal `h3` on mobile to avoid showing the title twice. We'll hide it on mobile with `hidden md:block`.
+### 2. `src/pages/Index.tsx` — Handle 404 specifically in the graph query
+- Add an `onError` callback via React Query's `meta` or use the `useEffect` + `error` pattern to detect when the graph query fails
+- Check if the error is an `ApiError` with status 404
+- Show a specific toast: title "Transaction Not Found", description "No transaction exists with that ID. Please check and try again."
+- For other errors, show a generic "Failed to fetch transaction" toast
 
 ## Technical Details
 
-**Files modified:**
-- `src/pages/Index.tsx` -- Add mobile collapsible wrappers around each panel
-- `src/components/TransactionDetails.tsx` -- Hide `h3` on mobile (`hidden md:block`)
-- `src/components/LabelEditor.tsx` -- Hide `h3` on mobile (`hidden md:block`)
+**`ApiError` class (api.ts):**
+```ts
+export class ApiError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
+}
+```
 
-**Approach:** Use the existing `Collapsible` component from Radix UI (already installed). On mobile, each panel gets a styled trigger bar with the section name and a chevron that rotates on open. The content area animates open/closed. On desktop, the collapsible wrapper is bypassed entirely, keeping the current layout unchanged.
+**Error handling (Index.tsx):**
+- Use a `useEffect` watching the query's `error` object
+- Check `error instanceof ApiError && error.status === 404` for the specific toast
+- Show generic error toast otherwise
+
+**Files modified:**
+- `src/lib/api.ts`
+- `src/pages/Index.tsx`
+
