@@ -53,6 +53,18 @@ const Index = () => {
     }
   }, [graphError, toast]);
 
+  const handleSearch = useCallback(
+    (txid: string) => {
+      setSearchTxid(txid);
+      setSelectedTxid(txid);
+    },
+    []
+  );
+
+  const handleNodeSelect = useCallback((txid: string) => {
+    setSelectedTxid(txid);
+  }, []);
+
   return (
     <div className="flex flex-col h-screen bg-background">
       <ConnectionBanner />
