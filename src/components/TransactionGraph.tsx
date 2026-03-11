@@ -366,7 +366,7 @@ export const TransactionGraph = forwardRef<TransactionGraphHandle, TransactionGr
               </div>
             </motion.div>
           ) : (
-            <div key="graph" ref={containerRef} className={`flex-1 relative bg-background dot-grid-bg transition-opacity duration-500 ${isReady ? "opacity-100" : "opacity-0"}`}>
+            <div key={`graph-${clusteringEnabled}`} ref={containerRef} className={`flex-1 relative bg-background dot-grid-bg transition-opacity duration-500 ${isReady ? "opacity-100" : "opacity-0"}`}>
               <CytoscapeComponent
                 elements={elements}
                 stylesheet={STYLESHEET}
