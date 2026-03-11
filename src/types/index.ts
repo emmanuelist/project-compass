@@ -40,6 +40,10 @@ export interface CytoscapeNodeData {
   value?: number;
   is_coinbase?: boolean;
   has_label?: boolean;
+  parent?: string;
+  is_cluster?: boolean;
+  cluster_label?: string;
+  child_count?: number;
 }
 
 export interface CytoscapeEdgeData {
