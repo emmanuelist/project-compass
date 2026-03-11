@@ -1,81 +1,70 @@
 
 
-# Framer Motion Animations Integration
+# Address Clustering + Minimap Overlay
 
-## Overview
-Add `framer-motion` for physics-based, interruptible animations across the app -- replacing CSS-only `animate-fade-in` / `animate-scale-in` with smoother, spring-driven transitions that feel more alive. This covers page-level mounts, panel content swaps, graph overlay entrance/exit, breadcrumb pill additions, FAB expansion, onboarding steps, toast feedback, and connection banner slide-in/out.
+## Feature 1: Address Clustering
 
-## What Changes
+Group transactions that share common addresses into visual clusters. The mock data has addresses like `alice`, `bob`, `exchange` that connect multiple transactions -- these become collapsible cluster groups.
 
-### 1. Install framer-motion
-Add `framer-motion` as a dependency (the only new package).
+### Approach
+- **New file: `src/lib/graph-clustering.ts`** -- Pure function that takes a `CytoscapeGraph` and `DEMO_TRANSACTIONS` data, analyzes which nodes share addresses (via inputs/outputs), and produces Cytoscape compound node elements. Each address that appears in 2+ transactions creates a parent cluster node. Child transaction nodes get a `parent` field pointing to their cluster.
+- **Modified: `src/components/TransactionGraph.tsx`**
+  - Add a `clusteringEnabled` state toggle (button in the zoom controls area)
+  - When enabled, run the clustering function and add compound parent nodes to the elements array
+  - Add Cytoscape stylesheet entries for compound nodes: rounded rectangle shape, semi-transparent fill, dashed border, address label at top
+  - Double-click on a cluster node toggles collapse/expand by hiding/showing children and resizing the parent to a single node
+  - Add cluster-specific styles: `$node > node` selector for compound parents with distinct visual treatment
+- **Modified: `src/types/index.ts`** -- Add optional `parent` and `is_cluster` fields to `CytoscapeNodeData`
+- **Modified: `src/components/GraphLegend.tsx`** -- Add "Cluster" entry to legend when clustering is active
+- **Modified: `src/lib/mock-data.ts`** -- Add `address` field to node data in `DEMO_GRAPH` so clustering can work without needing separate transaction lookup (derive from `DEMO_TRANSACTIONS`)
 
-### 2. Shared animation variants helper
-**New file: `src/lib/motion.ts`**
+### Clustering Logic
+For the demo data, addresses like `bob` (appears in txA output, txB input/output, txE input/output) would create a "bob" cluster containing txA, txB, txE. An address must appear in 2+ distinct transactions to form a cluster. Each node belongs to the cluster of its most-connected address (to avoid overlapping parents, since Cytoscape compound nodes don't support multiple parents).
 
-A small file exporting reusable variant objects and transition presets so every component uses consistent spring physics:
-- `fadeInUp` -- fade + translateY for content sections
-- `scaleIn` -- scale from 0.95 with opacity
-- `slideDown` -- for banners sliding in from top
-- `staggerContainer` -- parent variant that staggers children
-- `springTransition` -- shared spring config (stiffness: 300, damping: 24)
+### Visual Design
+- Cluster parent nodes: rounded rectangle, `background-opacity: 0.08`, dashed border in a muted purple/teal color, address label truncated at top
+- A toggle button (network/grid icon) in the zoom controls to enable/disable clustering
+- Collapsed clusters show as a single larger node with a count badge; expanding re-reveals children with layout animation
 
-### 3. Page-level entrance (`src/pages/Index.tsx`)
-Wrap the root `<div>` content in `<motion.div>` with `fadeInUp` on initial mount. The graph panel, details panel, and label editor each get `<AnimatePresence>` wrappers so content transitions (empty state to loaded, node selection changes) animate smoothly with crossfade.
+## Feature 2: Minimap Overlay
 
-### 4. Connection Banner (`src/components/ConnectionBanner.tsx`)
-Wrap in `<motion.div>` with `slideDown` entry and slide-up exit via `<AnimatePresence>`. When dismissed, it slides up and fades out instead of instantly vanishing.
+A small inset panel in the top-right corner showing the entire graph zoomed-out, with a blue rectangle indicating the current viewport bounds.
 
-### 5. Graph Breadcrumb pills (`src/components/GraphBreadcrumb.tsx`)
-Each breadcrumb pill becomes a `<motion.button>` using `layoutId` for smooth position transitions when the trail changes. New pills animate in with `scaleIn`; the entire bar uses `<AnimatePresence>` so it slides away when the trail is empty.
+### Approach
+- **New file: `src/components/GraphMinimap.tsx`** -- A React component that:
+  - Receives the Cytoscape `Core` ref
+  - Renders a `<canvas>` element (160x100px, glass background)
+  - On mount and on every `viewport`/`position`/`layoutstop` event from Cytoscape, redraws:
+    1. All nodes as small colored dots (2-3px) using the same color scheme (blue/green/gray)
+    2. All edges as thin gray lines
+    3. A semi-transparent blue rectangle showing the current viewport extent mapped to minimap coordinates
+  - Click/drag on the minimap pans the main graph to that position
+  - Uses `requestAnimationFrame` for throttled redraws
+- **Modified: `src/components/TransactionGraph.tsx`** -- Import and render `<GraphMinimap>` in the graph view, positioned `absolute top-3 right-3` (shift zoom controls or legend as needed to avoid overlap). Pass `cyRef.current` as a prop. Only render when graph has data.
 
-### 6. Transaction Details content swap (`src/components/TransactionDetails.tsx`)
-Wrap the entire return in `<AnimatePresence mode="wait">` keyed on `selectedTxid`. When the selected transaction changes, the old content fades out and the new content fades in with a subtle Y-shift -- giving the feeling of "flipping" between transaction cards. The 2x2 metric cards use staggered children (each card animates in 50ms apart).
+### Minimap Rendering
+- Map graph bounding box to minimap canvas coordinates
+- Draw nodes as circles with color based on `is_coinbase`/`has_label`/selected state
+- Draw edges as lines between node positions
+- Draw viewport rectangle: map `cy.extent()` to minimap coords, stroke with blue border + translucent fill
+- On `mousedown` + `mousemove` on canvas, compute the graph-space position and call `cy.pan()` to center on it
 
-### 7. Label Editor (`src/components/LabelEditor.tsx`)
-- The label list items use `<AnimatePresence>` + `<motion.div layout>` so adding/removing labels animates (new ones scale in, deleted ones scale out and collapse)
-- The editing border highlight animates via `motion.div`'s `animate` prop on `borderColor`/`backgroundColor` instead of a CSS class toggle
-
-### 8. Floating Action Button (`src/components/FloatingActions.tsx`)
-Replace CSS `animate-scale-in` with framer-motion `<motion.div>` using spring-based scale + opacity. The sub-buttons fan out with staggered spring animations (more organic than CSS delays). The main FAB rotates its icon 45 degrees on open.
-
-### 9. Onboarding Overlay (`src/components/OnboardingOverlay.tsx`)
-- The backdrop fades in with `motion.div`
-- Each step card staggers in with `scaleIn` variant (replacing CSS `animationDelay`)
-- The "Got it" button pulses subtly with a spring scale on hover
-- On dismiss, the entire overlay fades out before unmounting (via `AnimatePresence`)
-
-### 10. Graph panel overlays (`src/components/TransactionGraph.tsx`)
-- The node hover tooltip uses `<motion.div>` with `scaleIn` + `AnimatePresence` for smooth entry/exit (currently pops in/out)
-- The node/edge count badge and zoom controls fade in when graph loads
-- The loading spinner and empty state crossfade with `AnimatePresence mode="wait"`
-
-### 11. Status Bar copy pill (`src/components/StatusBar.tsx`)
-The "Copied!" pill uses `<motion.span>` with spring scale + opacity entry, and a smooth fade-out exit via `AnimatePresence`.
-
-### 12. Header demo badge (`src/components/Header.tsx`)
-The "DEMO" badge uses `<AnimatePresence>` + `<motion.div layoutId="demo-badge">` so it smoothly appears/disappears when toggling demo mode.
-
-### 13. Graph Legend (`src/components/GraphLegend.tsx`)
-Animate the legend card entrance with a slide-in from the left + fade when the graph first loads.
+### Layout Adjustments
+- Move the `GraphLegend` from `top-3 left-3` to stay where it is
+- Place minimap at `top-3 right-3`
+- Zoom controls remain at `bottom-3 right-3` (no conflict)
 
 ## Technical Details
 
-**New dependency:** `framer-motion` (latest)
+**New files (2):**
+- `src/lib/graph-clustering.ts` -- clustering algorithm
+- `src/components/GraphMinimap.tsx` -- canvas-based minimap
 
-**New file:** `src/lib/motion.ts` -- shared variants and transitions
+**Modified files (4):**
+- `src/components/TransactionGraph.tsx` -- clustering toggle, minimap integration, compound node styles
+- `src/types/index.ts` -- add `parent`/`is_cluster`/`cluster_label`/`child_count` to node data
+- `src/components/GraphLegend.tsx` -- cluster legend entry
+- `src/lib/mock-data.ts` -- add address data to graph nodes
 
-**Modified files (12):**
-- `src/pages/Index.tsx` -- motion.div wrapper, AnimatePresence for panels
-- `src/components/ConnectionBanner.tsx` -- motion.div with slideDown/exit
-- `src/components/GraphBreadcrumb.tsx` -- motion.button with layoutId, AnimatePresence
-- `src/components/TransactionDetails.tsx` -- AnimatePresence keyed swap, staggered cards
-- `src/components/LabelEditor.tsx` -- AnimatePresence for label list, motion layout
-- `src/components/FloatingActions.tsx` -- spring-based FAB expansion
-- `src/components/OnboardingOverlay.tsx` -- staggered steps, exit animation
-- `src/components/TransactionGraph.tsx` -- tooltip AnimatePresence, overlay fade-ins
-- `src/components/StatusBar.tsx` -- copy pill AnimatePresence
-- `src/components/Header.tsx` -- demo badge AnimatePresence
-- `src/components/GraphLegend.tsx` -- slide-in entrance
+**No new dependencies.** Canvas API for minimap, Cytoscape's built-in compound node support for clustering.
 
-**Scope:** Animation-only changes. No data flow, API, or business logic modifications. All existing CSS animations remain as fallbacks; framer-motion layers on top for the interactive/transition cases where CSS alone falls short (mount/unmount, layout shifts, spring physics, gesture-driven).
