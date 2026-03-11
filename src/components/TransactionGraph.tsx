@@ -1,14 +1,17 @@
-import { useRef, useCallback, useEffect, useState, useImperativeHandle, forwardRef } from "react";
+import { useRef, useCallback, useEffect, useState, useImperativeHandle, forwardRef, useMemo } from "react";
 import CytoscapeComponent from "react-cytoscapejs";
 import cytoscape from "cytoscape";
 import dagre from "cytoscape-dagre";
-import { ZoomIn, ZoomOut, Maximize, RotateCcw, Bitcoin } from "lucide-react";
+import { ZoomIn, ZoomOut, Maximize, RotateCcw, Bitcoin, Network } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { GraphLegend } from "@/components/GraphLegend";
+import { GraphMinimap } from "@/components/GraphMinimap";
 import { useAnimatedNumber } from "@/hooks/use-animated-number";
 import { fadeInUp, scaleIn, springTransition } from "@/lib/motion";
+import { clusterByAddress } from "@/lib/graph-clustering";
+import { DEMO_TRANSACTIONS } from "@/lib/mock-data";
 import type { CytoscapeGraph } from "@/types";
 
 dagre(cytoscape);
@@ -67,6 +70,49 @@ const STYLESHEET: cytoscape.StylesheetStyle[] = [
     style: {
       "overlay-opacity": 0.1,
     },
+  },
+  // Compound / cluster parent nodes
+  {
+    selector: "$node > node",
+    style: {
+      "background-color": "#6366f1",
+      "background-opacity": 0.06,
+      "border-width": 1.5,
+      "border-color": "#6366f180",
+      "border-style": "dashed" as any,
+      shape: "roundrectangle",
+      "padding-top": "16px",
+      "padding-left": "12px",
+      "padding-bottom": "12px",
+      "padding-right": "12px",
+      label: "data(cluster_label)",
+      "text-valign": "top",
+      "text-halign": "center",
+      "font-size": "9px",
+      color: "#818cf8",
+      "text-margin-y": 4,
+      // Disable normal node visuals on parent
+      "shadow-opacity": 0,
+      width: "auto" as any,
+      height: "auto" as any,
+    } as any,
+  },
+  {
+    selector: "node[?is_cluster]",
+    style: {
+      "background-color": "#6366f1",
+      "background-opacity": 0.06,
+      "border-width": 1.5,
+      "border-color": "#6366f180",
+      "border-style": "dashed" as any,
+      shape: "roundrectangle",
+      label: "data(label)",
+      "text-valign": "top",
+      "text-halign": "center",
+      "font-size": "9px",
+      color: "#818cf8",
+      "shadow-opacity": 0,
+    } as any,
   },
   {
     selector: "edge",
@@ -180,6 +226,8 @@ export const TransactionGraph = forwardRef<TransactionGraphHandle, TransactionGr
     const containerRef = useRef<HTMLDivElement>(null);
     const [hoverData, setHoverData] = useState<{ txid: string; value?: number; label?: string } | null>(null);
     const [hoverPos, setHoverPos] = useState({ x: 0, y: 0 });
+    const [clusteringEnabled, setClusteringEnabled] = useState(false);
+    const [cyReady, setCyReady] = useState<cytoscape.Core | null>(null);
 
     useImperativeHandle(ref, () => ({
       fitGraph: () => cyRef.current?.fit(undefined, 40),
@@ -189,11 +237,29 @@ export const TransactionGraph = forwardRef<TransactionGraphHandle, TransactionGr
       },
     }));
 
+    // Compute elements with optional clustering
+    const elements = useMemo(() => {
+      if (!graphData) return [];
+      const source = clusteringEnabled
+        ? clusterByAddress(graphData, DEMO_TRANSACTIONS).clusteredGraph
+        : graphData;
+
+      return [
+        ...source.nodes.map((n) => ({
+          data: { ...n.data, ...(n.data.parent ? { parent: n.data.parent } : {}) },
+          group: "nodes" as const,
+        })),
+        ...source.edges.map((e) => ({ data: e.data, group: "edges" as const })),
+      ];
+    }, [graphData, clusteringEnabled]);
+
     const handleCyInit = useCallback(
       (cy: cytoscape.Core) => {
         cyRef.current = cy;
+        setCyReady(cy);
         cy.on("tap", "node", (e) => {
           const node = e.target;
+          if (node.data("is_cluster")) return; // don't select cluster parents
           const txid = node.data("txid");
           if (txid) {
             onNodeSelect(txid);
@@ -203,8 +269,9 @@ export const TransactionGraph = forwardRef<TransactionGraphHandle, TransactionGr
           }
         });
         cy.on("mouseover", "node", (e) => {
-          document.body.style.cursor = "pointer";
           const node = e.target;
+          if (node.data("is_cluster")) return;
+          document.body.style.cursor = "pointer";
           const container = containerRef.current;
           if (container) {
             const renderedPos = node.renderedPosition();
@@ -231,7 +298,7 @@ export const TransactionGraph = forwardRef<TransactionGraphHandle, TransactionGr
         cyRef.current.layout(LAYOUT as any).run();
         cyRef.current.fit(undefined, 40);
       }
-    }, [graphData]);
+    }, [graphData, clusteringEnabled]);
 
     useEffect(() => {
       if (graphData && !isLoading) {
@@ -299,12 +366,9 @@ export const TransactionGraph = forwardRef<TransactionGraphHandle, TransactionGr
               </div>
             </motion.div>
           ) : (
-            <div key="graph" className={`flex-1 relative bg-background dot-grid-bg transition-opacity duration-500 ${isReady ? "opacity-100" : "opacity-0"}`}>
+            <div key="graph" ref={containerRef} className={`flex-1 relative bg-background dot-grid-bg transition-opacity duration-500 ${isReady ? "opacity-100" : "opacity-0"}`}>
               <CytoscapeComponent
-                elements={[
-                  ...graphData.nodes.map((n) => ({ data: n.data, group: "nodes" as const })),
-                  ...graphData.edges.map((e) => ({ data: e.data, group: "edges" as const })),
-                ]}
+                elements={elements}
                 stylesheet={STYLESHEET}
                 layout={LAYOUT as any}
                 cy={handleCyInit}
@@ -313,7 +377,8 @@ export const TransactionGraph = forwardRef<TransactionGraphHandle, TransactionGr
               />
 
               <NodeTooltip data={hoverData} position={hoverPos} />
-              <GraphLegend />
+              <GraphLegend clusteringEnabled={clusteringEnabled} />
+              <GraphMinimap cy={cyReady} />
 
               {/* Node/Edge count */}
               <motion.div
@@ -330,6 +395,19 @@ export const TransactionGraph = forwardRef<TransactionGraphHandle, TransactionGr
                 animate={{ opacity: 1, x: 0, transition: { ...springTransition, delay: 0.4 } }}
                 className="absolute bottom-3 right-3 flex flex-col gap-1 z-10"
               >
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className={`h-8 w-8 glass ${clusteringEnabled ? "ring-1 ring-[#6366f1]/50 text-[#818cf8]" : ""}`}
+                      onClick={() => setClusteringEnabled((v) => !v)}
+                    >
+                      <Network className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="left">{clusteringEnabled ? "Disable" : "Enable"} Address Clustering</TooltipContent>
+                </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button variant="secondary" size="icon" className="h-8 w-8 glass" onClick={() => cyRef.current?.zoom(cyRef.current.zoom() * 1.3)}>
